@@ -52,6 +52,8 @@
 #define MLX5_RX_RING_SIZE 2048
 #define MLX5_TX_RING_SIZE 2048
 
+static const int dpdk_port = 1;
+
 static const struct rte_eth_conf port_conf_default = {
 	.rxmode = {
 		.max_rx_pkt_len = ETH_MAX_LEN,
@@ -214,8 +216,8 @@ int dpdk_init(void)
 	}
 
 	/* check that there is a port to send/receive on */
-	if (!rte_eth_dev_is_valid_port(0)) {
-		log_err("dpdk: no available ports");
+	if (!rte_eth_dev_is_valid_port(dpdk_port)) {
+		log_err("dpdk: port %d not available", dpdk_port);
 		return -1;
 	}
 
@@ -231,7 +233,7 @@ int dpdk_init(void)
 int dpdk_late_init(void)
 {
 	/* initialize port */
-	dp.port = 0;
+	dp.port = dpdk_port;
 	if (dpdk_port_init(dp.port, dp.rx_mbuf_pool) != 0) {
 		log_err("dpdk: cannot init port %"PRIu8 "\n", dp.port);
 		return -1;

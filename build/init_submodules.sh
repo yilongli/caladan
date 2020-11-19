@@ -16,7 +16,7 @@ cd ..
 
 echo building DPDK
 patch -p 1 -d dpdk/ < build/ixgbe_19_11.patch
-if lspci | grep -q 'ConnectX-[4,5]'; then
+if lspci | grep -q 'ConnectX-[4,5,6]'; then
   rm -f dpdk/drivers/net/mlx5/mlx5_custom.h
   patch -p1 -N -d dpdk/ < build/mlx5_19_11.patch
 
