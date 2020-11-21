@@ -43,6 +43,7 @@ add_executable(caladan
         apps/netbench/synthetic_worker.h
         apps/netbench/util.cc
         apps/netbench/util.h
+        apps/shuffle/shuffle.cc
         apps/spdk_perf/perf.c
         apps/storage_service/reflex.h
         apps/storage_service/storage_server.cc
