@@ -16,7 +16,7 @@ dep = $(obj:.o=.d)
 all: shuffle
 
 shuffle: $(shuffle_obj) $(librt_libs) $(RUNTIME_DEPS)
-	$(LDXX) -o $@ $(LDFLAGS) ../../shim/libshim.a -ldl  $(obj) $(librt_libs) $(RUNTIME_LIBS) $(LIBS)
+	$(LDXX) -o $@ $(LDFLAGS) $(obj) $(librt_libs) $(RUNTIME_LIBS) $(LIBS)
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(dep)   # include all dep files in the makefile
