@@ -3,6 +3,7 @@
  */
 
 #include <pthread.h>
+#include <stdio.h>
 
 #include <base/cpu.h>
 #include <base/init.h>

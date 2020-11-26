@@ -41,10 +41,14 @@ static std::vector<struct netaddr> server_list;
 /// TCP connections to all the nodes in the cluster (except itself).
 static std::vector<std::unique_ptr<rt::TcpConn>> tcp_socks;
 
+/// File to write the log messages into.
+static FILE* log_file = stdout;
+
 void print_help(const char* exec_cmd) {
-    printf("Usage: %s [options]\n\n"
-           "Start a node that will participate in the shuffle experiment.\n\n"
-           "--caladan-config   Configure file for the Caladan runtime.\n"
+    printf("Usage: %s [caladan-config] [options]\n\n"
+           "Start a node that will participate in the shuffle experiment.\n"
+           "The first argument specifies the Caladan runtime config file,\n"
+           "and the rest are options. The following options are supported:\n\n"
            "--ifname           Symbolic name of the network interface this node"
            "                   will be using in the experiment; this determines"
            "                   the IP address of the node.\n"
@@ -53,7 +57,8 @@ void print_help(const char* exec_cmd) {
            "--num-nodes        Total number of nodes in the experiment.\n"
            "--master-addr      Network address where the master server can be"
            "                   reached, in the form of <ip>:<port>"
-           "                   (e.g., 10.10.1.2:5000).\n",
+           "                   (e.g., 10.10.1.2:5000).\n"
+           "--log-file         Path to the file which is used for logging.\n",
            exec_cmd
            );
 }
@@ -98,7 +103,7 @@ cluster_init()
         // Sign up with the master node to obtain the server list.
         std::unique_ptr<rt::TcpConn> c(rt::TcpConn::Dial({0, 0}, master_addr));
         if (c == nullptr) {
-            panic("couldn't reach the master server");
+            panic("couldn't reach the master node");
         }
         server_list.resize(num_nodes);
         c->ReadFull(&server_list[0], num_nodes * sizeof(netaddr));
@@ -119,11 +124,11 @@ cluster_init()
  * Parse the command-line arguments to initialize the state of this node.
  *
  * \param words
- *      Command-line arguments (including the command name as @words[0]).
+ *      Command-line arguments.
  */
 void
 server_init(std::vector<std::string>& words) {
-    for (size_t i = 1; i < words.size(); i++) {
+    for (size_t i = 0; i < words.size(); i++) {
         const char *option = words[i].c_str();
         if (strcmp(option, "--ifname") == 0) {
             int local_ip = get_local_ip(words[i+1]);
@@ -132,8 +137,10 @@ server_init(std::vector<std::string>& words) {
             local_addr.ip = local_ip;
             i++;
         } else if (strcmp(option, "--port") == 0) {
-            if (!parse(words, i+1, &local_addr.port, option, "integer"))
+            int local_port;
+            if (!parse(words, i+1, &local_port, option, "integer"))
                 panic("failed to parse '--port %s'", words[i+1].c_str());
+            local_addr.port = local_port;
             i++;
         } else if (strcmp(option, "--num-nodes") == 0) {
             if (!parse(words, i+1, &num_nodes, option, "integer"))
@@ -143,6 +150,12 @@ server_init(std::vector<std::string>& words) {
             int ret = parse_netaddr(words[i+1].c_str(), &master_addr);
             if (ret < 0)
                 panic("failed to parse '--master-addr %s'", words[i+1].c_str());
+            i++;
+        } else if (strcmp(option, "--log-file") == 0) {
+            FILE* file = std::fopen(words[i+1].c_str(), "w");
+            if (!file)
+                panic("failed to open log file '%s'", words[i+1].c_str());
+            log_file = file;
             i++;
         } else {
             panic("Unknown option '%s'\n", option);
@@ -158,6 +171,9 @@ server_init(std::vector<std::string>& words) {
     } else if (master_addr.ip == 0) {
         panic("failed to initialize the address of the master node");
     }
+
+    setlinebuf(log_file);
+    rt_log_file = log_file;
 }
 
 /**
@@ -251,7 +267,7 @@ int main(int argc, char* argv[]) {
 	}
 
     std::vector<std::string> words;
-    for (int i = 1; i < argc; i++) {
+    for (int i = 2; i < argc; i++) {
         words.emplace_back(argv[i]);
     }
 

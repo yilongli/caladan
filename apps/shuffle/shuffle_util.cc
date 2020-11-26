@@ -1,9 +1,5 @@
 #include "shuffle_util.h"
 
-extern "C" {
-#include <net/ip.h>
-}
-
 #include <net/if.h>
 #include <netinet/in.h>
 #include <sys/ioctl.h>
@@ -52,8 +48,9 @@ parse_netaddr(const char* str, struct netaddr* addr) {
 
 std::string
 netaddr_to_str(struct netaddr addr) {
-    std::string str;
-    char ip_str[IP_ADDR_STR_LEN];
-    ip_addr_to_str(addr.ip, ip_str);
-    str_to_netaddr()
+    char buf[32] = {};
+    snprintf(buf, 32, "%d.%d.%d.%d:%u", ((addr.ip >> 24) & 0xff),
+            ((addr.ip >> 16) & 0xff), ((addr.ip >> 8) & 0xff), (addr.ip & 0xff),
+            addr.port);
+    return buf;
 }

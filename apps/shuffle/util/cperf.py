@@ -22,9 +22,6 @@ import copy
 import datetime
 import glob
 import math
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import platform
 import re
@@ -51,6 +48,81 @@ log_file = 0
 
 # Indicates whether we should generate additional log messages for debugging
 verbose = False
+
+# Defaults for command-line options, if the application doesn't specify its
+# own values.
+default_defaults = {
+    'server_list':         '/shome/rc-hosts.txt',
+    'shuffle_dir':         '/shome/caladan/apps/shuffle',
+    'shuffle_bin':         'shuffle_node',
+    'caladan_cfg':         '~/caladan.config',
+    'ifname':              'eno1d1',
+    'server_port':         5000,
+    'master_addr':         '10.10.1.2:5000',
+    'log_dir':             'logs/' + time.strftime('%Y%m%d%H%M%S'),
+    'log_file':            'node.log',
+}
+
+def get_parser(description, usage, defaults = {}):
+    """
+    Returns an ArgumentParser for options that are commonly used in
+    performance tests.
+    description:    A string describing the overall functionality of this
+                    particular performance test
+    usage:          A command synopsis (passed as usage to ArgumentParser)
+    defaults:       A dictionary whose keys are option names and whose values
+                    are defaults; used to modify the defaults for some of the
+                    options (there is a default default for each option).
+    """
+    for key in default_defaults:
+        if not key in defaults:
+            defaults[key] = default_defaults[key]
+    parser = argparse.ArgumentParser(description=description + ' The options '
+            'below may include some that are not used by this particular '
+            'benchmark', usage=usage, add_help=False,
+            conflict_handler='resolve')
+    parser.add_argument('--server-list', dest='server_list',
+            default=defaults['server_list'],
+            help='Path to the config file which contains all the nodes '
+                 'available in the cluster (default: %s)'
+            % (defaults['server_list']))
+    parser.add_argument('--shuffle-dir', dest='shuffle_dir',
+            default=defaults['shuffle_dir'],
+            help='Top-level directory of the shuffle application (default: %s)'
+            % (defaults['shuffle_dir']))
+    parser.add_argument('--shuffle-bin', dest='shuffle_bin',
+            default=defaults['shuffle_bin'],
+            help='Name of the executable file (default: %s)'
+            % (defaults['shuffle_bin']))
+    parser.add_argument('--caladan-cfg', dest='caladan_cfg',
+            default=defaults['caladan_cfg'],
+            help='Path to the config file for Caladan runtime (default: %s)'
+            % (defaults['caladan_cfg']))
+    parser.add_argument('--ifname', dest='ifname', default=defaults['ifname'],
+            help='Symbolic name of the network interface to use (default: %s)'
+            % (defaults['ifname']))
+    parser.add_argument('--server-port', type=int, dest='server_port',
+            default=defaults['server_port'],
+            help='Server port number used by the application (default: %d)'
+            % (defaults['server_port']))
+    parser.add_argument('--num-nodes', type=int, dest='num_nodes',
+            help='Number of nodes used in the experiment')
+    parser.add_argument('--master-addr', dest='master_addr',
+            default=defaults['master_addr'],
+            help='Network address of the master node (default: %s)'
+            % (defaults['master_addr']))
+    parser.add_argument('--log-dir', dest='log_dir',
+            default=defaults['log_dir'],
+            help='rcnfs directory used to collect log files from other nodes '
+                 'in the cluster at the end of the experiment (default: %s)'
+            % (defaults['log_dir']))
+    parser.add_argument('--log-file', dest='log_file',
+            default=defaults['log_file'],
+            help='Local file used to log messages by each node (default: %s)'
+            % (defaults['log_file']))
+    return parser
+
+
 
 def log(message):
     """
@@ -129,15 +201,19 @@ def get_cluster_nodes(cluster_config):
     Read the cluster config file to obtain the list of the nodes in the cluster.
 
     :param cluster_config:
-        Each line of the file contains a host name and an IP address, separated
-        by a whitespace.
+        Each line of the file contains a host name, its public IP address, and
+        its private IP address, separated by whitespaces.
     :return:
-        A dictionary from host names to IP addresses.
+        A list of nodes in the cluster; each node is represented by its hostname
+        and public IP address.
     """
-    cluster_nodes = {}
+    cluster_nodes = []
     for line in open(cluster_config):
-        hostname, ip_addr = line.strip().split(" ")
-        cluster_nodes[hostname] = ip_addr
+        try:
+            hostname, public_ip, private_ip = line.strip().split(" ")
+            cluster_nodes.append((hostname, public_ip))
+        except:
+            print("failed to parse '%s'" % line)
     return cluster_nodes
 
 
@@ -153,3 +229,30 @@ def cluster_exec(servers, cmd):
     for server in servers:
         vlog("Executing '%s' on %s" % (cmd, server))
         subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", server, cmd])
+
+
+# def stop_nodes():
+#     """
+#     Exit all of the nodes that are currently active.
+#     """
+#     global active_nodes, server_nodes
+#     for id, popen in homa_prios.items():
+#         subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no",
+#                 "node-%d" % id, "sudo", "pkill", "homa_prio"])
+#         try:
+#             popen.wait(5.0)
+#         except subprocess.TimeoutExpired:
+#             log("Timeout killing homa_prio on node-%d" % (id))
+#     for node in active_nodes.values():
+#         node.stdin.write("exit\n")
+#         try:
+#             node.stdin.flush()
+#         except BrokenPipeError:
+#             log("Broken pipe to node-%d" % (id))
+#     for node in active_nodes.values():
+#         node.wait(5.0)
+#     for id in active_nodes:
+#         subprocess.run(["rsync", "-rtvq", "node-%d:node.log" % (id),
+#                 "%s/node-%d.log" % (log_dir, id)])
+#     active_nodes.clear()
+#     server_nodes = range(0,0)

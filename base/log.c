@@ -19,6 +19,8 @@
 int max_loglevel = LOG_DEBUG;
 /* stored here to avoid pushing too much on the stack */
 static __thread char buf[MAX_LOG_LEN];
+/* file where log messages should be written */
+static FILE* log_file;
 
 void logk(int level, const char *fmt, ...)
 {
@@ -44,10 +46,11 @@ void logk(int level, const char *fmt, ...)
 	va_start(ptr, fmt);
 	vsnprintf(buf + off, MAX_LOG_LEN - off, fmt, ptr);
 	va_end(ptr);
-	puts(buf);
+	FILE* stream = log_file ? log_file : stdout;
+	fputs(buf, stream);
 
 	if (level <= LOG_ERR)
-		fflush(stdout);
+		fflush(stream);
 }
 
 #define MAX_CALL_DEPTH	256
@@ -67,4 +70,9 @@ void logk_bug(bool fatal, const char *expr,
 
 	if (fatal)
 		init_shutdown(EXIT_FAILURE);
+}
+
+void set_log_file(FILE* file)
+{
+    log_file = file;
 }

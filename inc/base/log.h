@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdio.h>
 
 #include <base/stddef.h>
 #include <base/time.h>
@@ -13,6 +14,7 @@
 extern void logk(int level, const char *fmt, ...)
 	__attribute__((__format__ (__printf__, 2, 3)));
 extern void logk_backtrace(void);
+extern void set_log_file(FILE* file);
 
 /* forces format checking */
 #define no_logk(level, fmt, ...) \

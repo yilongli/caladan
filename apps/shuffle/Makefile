@@ -13,9 +13,9 @@ obj = $(src:.cc=.o)
 dep = $(obj:.o=.d)
 
 # must be first
-all: shuffle
+all: shuffle_node
 
-shuffle: $(shuffle_obj) $(librt_libs) $(RUNTIME_DEPS)
+shuffle_node: $(shuffle_obj) $(librt_libs) $(RUNTIME_DEPS)
 	$(LDXX) -o $@ $(LDFLAGS) $(obj) $(librt_libs) $(RUNTIME_LIBS) $(LIBS)
 
 ifneq ($(MAKECMDGOALS),clean)
