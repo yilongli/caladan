@@ -19,24 +19,19 @@
 
 from cperf import *
 
-# FIXME: get_parser
 parser = get_parser(description='Basic shuffle benchmark.',
         usage='%(prog)s [options]', defaults={})
 options = parser.parse_args()
-# print(options)
+
+init(options)
 
 #
-cluster_nodes = get_cluster_nodes(options.server_list)
-print(cluster_nodes)
-
 command = "%s/%s %s --ifname %s --port %d --num-nodes %d --master-addr %s " \
           "--log-file %s" % \
           (options.shuffle_dir, options.shuffle_bin, options.caladan_cfg,
            options.ifname, options.server_port, options.num_nodes,
            options.master_addr, options.log_file)
 print(command)
-# server_list = ["10.10.1.2", "10.10.1.3"]
-# command = "/shome/caladan/apps/shuffle/scripts/start_nodes.sh " \
-#           "/home/yilongl/caladan.config eno1d1 5000 2 10.10.1.2:5000 " \
-#           "/shome/caladan/apps/shuffle/shuffle /shome/log/"
-# cluster_exec(server_list, command)
+cluster_nodes = get_cluster_nodes(options.server_list)
+cluster_nodes = cluster_nodes[:options.num_nodes]
+cluster_exec(cluster_nodes, command)

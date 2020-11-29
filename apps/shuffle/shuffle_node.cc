@@ -127,7 +127,7 @@ cluster_init()
  *      Command-line arguments.
  */
 void
-server_init(std::vector<std::string>& words) {
+parse_args(std::vector<std::string>& words) {
     for (size_t i = 0; i < words.size(); i++) {
         const char *option = words[i].c_str();
         if (strcmp(option, "--ifname") == 0) {
@@ -171,9 +171,6 @@ server_init(std::vector<std::string>& words) {
     } else if (master_addr.ip == 0) {
         panic("failed to initialize the address of the master node");
     }
-
-    setlinebuf(log_file);
-    rt_log_file = log_file;
 }
 
 /**
@@ -234,14 +231,10 @@ connect_alltoall()
 
 void
 real_main(void* arg) {
-    auto& words = *static_cast<std::vector<std::string>*>(arg);
-
-    server_init(words);
     cluster_init();
     connect_alltoall();
 
     // Test all-to-all communication
-    // FIXME: use epoll?
     int sum = local_rank;
     for (auto& tcp_sock : tcp_socks) {
         if (tcp_sock) {
@@ -270,8 +263,10 @@ int main(int argc, char* argv[]) {
     for (int i = 2; i < argc; i++) {
         words.emplace_back(argv[i]);
     }
+    parse_args(words);
 
-    ret = runtime_init(argv[1], real_main, &words);
+    set_log_file(log_file);
+    ret = runtime_init(argv[1], real_main, nullptr);
     if (ret) {
         panic("failed to start Caladan runtime");
     }

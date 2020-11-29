@@ -35,7 +35,8 @@ import fcntl
 # If a server's id appears as a key in this dictionary, it means we
 # have started cp_node running on that node. The value of each entry is
 # a Popen object that can be used to communicate with the node.
-active_nodes = {}
+# active_nodes = {}
+active_nodes = []
 
 # The range of nodes currently running cp_node servers.
 server_nodes = range(0,0)
@@ -43,11 +44,17 @@ server_nodes = range(0,0)
 # Directory containing log files.
 log_dir = ''
 
+# Local log file where each node writes its log messages.
+log_file = ''
+
 # Open file (in the log directory) where log messages should be written.
-log_file = 0
+cperf_log_file = 0
 
 # Indicates whether we should generate additional log messages for debugging
 verbose = False
+
+# Time when this benchmark was run.
+date_time = str(datetime.datetime.now())
 
 # Defaults for command-line options, if the application doesn't specify its
 # own values.
@@ -120,8 +127,34 @@ def get_parser(description, usage, defaults = {}):
             default=defaults['log_file'],
             help='Local file used to log messages by each node (default: %s)'
             % (defaults['log_file']))
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
+            help='Enable verbose output in node logs')
     return parser
 
+
+def init(options):
+    """
+    Initialize various global state, such as the log file.
+    """
+    global log_dir, log_file, cperf_log_file, verbose
+    log_dir = options.log_dir
+    log_file = options.log_file
+
+    if os.path.exists(log_dir):
+        shutil.rmtree(log_dir)
+    os.makedirs(log_dir)
+    os.symlink(log_dir, log_dir + "../latest", target_is_directory=True)
+
+    cperf_log_file = open("%s/cperf.log" % (log_dir), "a")
+    verbose = options.verbose
+    vlog("cperf starting at %s" % (date_time))
+    s = ""
+    opts = vars(options)
+    for name in sorted(opts.keys()):
+        if len(s) != 0:
+            s += ", "
+        s += ("--%s: %s" % (name, str(opts[name])))
+    vlog("Options: %s" % (s))
 
 
 def log(message):
@@ -130,10 +163,10 @@ def log(message):
 
     message:  The log message to write; a newline will be appended.
     """
-    global log_file
+    global cperf_log_file
     print(message)
-    log_file.write(message)
-    log_file.write("\n")
+    cperf_log_file.write(message)
+    cperf_log_file.write("\n")
 
 
 def vlog(message):
@@ -143,11 +176,11 @@ def vlog(message):
 
     message:  The log message to write; a newline will be appended.
     """
-    global log_file, verbose
+    global cperf_log_file, verbose
     if verbose:
         print(message)
-    log_file.write(message)
-    log_file.write("\n")
+    cperf_log_file.write(message)
+    cperf_log_file.write("\n")
 
 
 def wait_output(string, nodes, cmd, time_limit=10.0):
@@ -226,33 +259,34 @@ def cluster_exec(servers, cmd):
     :param command:
         Command to run.
     """
-    for server in servers:
-        vlog("Executing '%s' on %s" % (cmd, server))
-        subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", server, cmd])
+    for hostname, ip in servers:
+        vlog("Executing '%s' on %s" % (cmd, hostname))
+        subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no", ip, cmd])
+        active_nodes.append((hostname, ip))
 
 
-# def stop_nodes():
-#     """
-#     Exit all of the nodes that are currently active.
-#     """
-#     global active_nodes, server_nodes
-#     for id, popen in homa_prios.items():
-#         subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no",
-#                 "node-%d" % id, "sudo", "pkill", "homa_prio"])
-#         try:
-#             popen.wait(5.0)
-#         except subprocess.TimeoutExpired:
-#             log("Timeout killing homa_prio on node-%d" % (id))
-#     for node in active_nodes.values():
-#         node.stdin.write("exit\n")
-#         try:
-#             node.stdin.flush()
-#         except BrokenPipeError:
-#             log("Broken pipe to node-%d" % (id))
-#     for node in active_nodes.values():
-#         node.wait(5.0)
-#     for id in active_nodes:
-#         subprocess.run(["rsync", "-rtvq", "node-%d:node.log" % (id),
-#                 "%s/node-%d.log" % (log_dir, id)])
-#     active_nodes.clear()
-#     server_nodes = range(0,0)
+def stop_nodes():
+    """
+    Exit all of the nodes that are currently active.
+    """
+    # global active_nodes, server_nodes
+    # for id, popen in homa_prios.items():
+    #     subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no",
+    #             "node-%d" % id, "sudo", "pkill", "homa_prio"])
+    #     try:
+    #         popen.wait(5.0)
+    #     except subprocess.TimeoutExpired:
+    #         log("Timeout killing homa_prio on node-%d" % (id))
+    # for node in active_nodes.values():
+    #     node.stdin.write("exit\n")
+    #     try:
+    #         node.stdin.flush()
+    #     except BrokenPipeError:
+    #         log("Broken pipe to node-%d" % (id))
+    # for node in active_nodes.values():
+    #     node.wait(5.0)
+    for hostname, ip in active_nodes:
+        subprocess.run(["rsync", "-rtvq", "%s:%s" % (ip, log_file),
+                "%s/%s.log" % (log_dir, hostname)])
+    active_nodes.clear()
+    # server_nodes = range(0,0)
