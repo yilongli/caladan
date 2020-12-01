@@ -3,46 +3,30 @@ extern "C" {
 #include <net/ip.h>
 #include <runtime/runtime.h>
 #include <runtime/smalloc.h>
-#include <runtime/storage.h>
 }
 
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <bits/unique_ptr.h>
-#include <vector>
+#include <iostream>
 #include <fstream>
+#include <atomic>
 
-#include "net.h"
-#include "sync.h"
 #include "thread.h"
 
-#include "shuffle_util.h"
+#include "cluster.h"
+#include "shuffle_tcp.h"
+#include "workload.h"
 
-/// Number of nodes in the experiment.
-static int num_nodes = -1;
+/// Command-line options.
+static CommandLineOptions cmd_line_opts;
 
-/// Network address of this node.
-static struct netaddr local_addr;
+/// Cluster of nodes used in the experiment.
+static Cluster cluster;
 
-/// Network address of the master node in the cluster.
-static struct netaddr master_addr;
-
-/// Rank of this node.
-static int local_rank = -1;
-
-/// Listen queue used to accept incoming TCP connections.
-static std::unique_ptr<rt::TcpQueue> listen_queue;
-
-/// Network addresses of all the nodes in the cluster, ordered by rank.
-static std::vector<struct netaddr> server_list;
-
-/// TCP connections to all the nodes in the cluster (except itself).
-static std::vector<std::unique_ptr<rt::TcpConn>> tcp_socks;
-
-/// File to write the log messages into.
-static FILE* log_file = stdout;
+/// Current shuffle workload.
+static shuffle_op current_op;
 
 void print_help(const char* exec_cmd) {
     printf("Usage: %s [caladan-config] [options]\n\n"
@@ -58,215 +42,161 @@ void print_help(const char* exec_cmd) {
            "--master-addr      Network address where the master server can be"
            "                   reached, in the form of <ip>:<port>"
            "                   (e.g., 10.10.1.2:5000).\n"
-           "--log-file         Path to the file which is used for logging.\n",
+           "--log-file         Path to the file which is used for logging.\n"
+           "\n"
+           "After startup, the program will enter a loop reading lines from\n"
+           "standard input and executing them as commands. The following\n"
+           "commands are supported, each followed by a list of options\n"
+           "supported by that command:\n\n"
+           "verify_conn        Check all-to-all connectivity in the cluster\n"
+           "                   by performing an all-reduce on the node ranks.\n"
+           "\n"
+           "setup_workload     Configure the shuffle workload.\n"
+           "  --seed           Seed value used to generate the message sizes.\n"
+           "  --avg-msg-size   Average length of the shuffle messages.\n"
+           "  --skew-factor    Message skew factor (TODO: XXX).\n"
+           "\n"
+           "time_sync          Synchronize the clocks in the cluster.\n"
+           "  --port           UDP port number dedicated to time_sync probes.\n"
+           "  --seconds        Duration to run the time sync protocol.\n"
+           "\n"
+           "run_bench          Start running the shuffle benchmark.\n"
+           "  --protocol       Transport protocol to use: homa or tcp\n"
+           "  --epoll          Use epoll for efficient monitoring of incoming\n"
+           "                   data at TCP sockets.\n"
+           "  --policy         random, round-robin, or \"high-entropy\"\n"
+           "  --max-unacked    Maximum number of outbound messages which can\n"
+           "                   be in progress at any time.\n"
+           "  --seg-size       Maximum bumber of bytes in message segment.\n"
+           "  --times          Number of times to repeat the experiment.\n"
+           "\n"
+           "exit               Exits the application.\n",
            exec_cmd
            );
+    // FIXME: how to simulate the senario of 10000 sockets? should I implement it in another program?
 }
 
-/**
- * Find out which nodes are in the cluster and their ranks.
- */
-void
-cluster_init()
+int run_bench_cmd(RunBenchOptions& opts)
 {
-    // Every node needs a listen queue to accept incoming connections.
-    listen_queue.reset(rt::TcpQueue::Listen(local_addr, 4096));
-    if (listen_queue == nullptr) {
-        panic("couldn't listen for connections");
-    }
-
-    assert(server_list.empty());
-    bool is_master = (local_addr.ip == master_addr.ip) &&
-                     (local_addr.port == master_addr.port);
-    if (is_master) {
-        // Wait for the other nodes to contact us; assign ranks in order.
-        // The incoming connections will be teared down afterwards.
-        local_rank = 0;
-        server_list.push_back(master_addr);
-        std::vector<std::unique_ptr<rt::TcpConn>> conns;
-        for (int i = 1; i < num_nodes; i++) {
-            rt::TcpConn* c = listen_queue->Accept();
-            if (c == nullptr) {
-                panic("couldn't accept a connection");
-            }
-            server_list.push_back(c->RemoteAddr());
-            conns.emplace_back(c);
-            log_info("node-0: accepted connection from node-%d (%s)", i,
-                    netaddr_to_str(server_list[i]).c_str());
-        }
-
-        // Broadcast the server list to all nodes.
-        for (auto& conn : conns) {
-            conn->WriteFull(server_list.data(), num_nodes * sizeof(netaddr));
-        }
-    } else {
-        // Sign up with the master node to obtain the server list.
-        std::unique_ptr<rt::TcpConn> c(rt::TcpConn::Dial({0, 0}, master_addr));
-        if (c == nullptr) {
-            panic("couldn't reach the master node");
-        }
-        server_list.resize(num_nodes);
-        c->ReadFull(&server_list[0], num_nodes * sizeof(netaddr));
-
-        // Find out its rank within the cluster.
-        local_rank = -1;
-        for (auto& node : server_list) {
-            local_rank++;
-            if (node.ip == local_addr.ip && node.port == local_addr.port) {
-                break;
-            }
-        }
-        log_info("node-%d: received full server list", local_rank);
-    }
+    // fixme: move to run_bench.h?
+//    tcp_shuffle(c, op);
+//    tcp_epoll_shuffle(c);
+    return 0;
 }
 
-/**
- * Parse the command-line arguments to initialize the state of this node.
- *
- * \param words
- *      Command-line arguments.
- */
-void
-parse_args(std::vector<std::string>& words) {
-    for (size_t i = 0; i < words.size(); i++) {
-        const char *option = words[i].c_str();
-        if (strcmp(option, "--ifname") == 0) {
-            int local_ip = get_local_ip(words[i+1]);
-            if (local_ip < 0)
-                panic("Unknown interface '%s'", words[i+1].c_str());
-            local_addr.ip = local_ip;
-            i++;
-        } else if (strcmp(option, "--port") == 0) {
-            int local_port;
-            if (!parse(words, i+1, &local_port, option, "integer"))
-                panic("failed to parse '--port %s'", words[i+1].c_str());
-            local_addr.port = local_port;
-            i++;
-        } else if (strcmp(option, "--num-nodes") == 0) {
-            if (!parse(words, i+1, &num_nodes, option, "integer"))
-                panic("failed to parse '--num-nodes %s'", words[i+1].c_str());
-            i++;
-        } else if (strcmp(option, "--master-addr") == 0) {
-            int ret = parse_netaddr(words[i+1].c_str(), &master_addr);
-            if (ret < 0)
-                panic("failed to parse '--master-addr %s'", words[i+1].c_str());
-            i++;
-        } else if (strcmp(option, "--log-file") == 0) {
-            FILE* file = std::fopen(words[i+1].c_str(), "w");
-            if (!file)
-                panic("failed to open log file '%s'", words[i+1].c_str());
-            log_file = file;
-            i++;
-        } else {
-            panic("Unknown option '%s'\n", option);
-        }
-    }
-
-    if (local_addr.ip == 0) {
-        panic("failed to initialize local IP address");
-    } else if (local_addr.port == 0) {
-        panic("failed to initialize local port number");
-    } else if (num_nodes < 0) {
-        panic("failed to initialize the number of nodes");
-    } else if (master_addr.ip == 0) {
-        panic("failed to initialize the address of the master node");
-    }
-}
-
-/**
- * Establish TCP connections between every pair of nodes in the cluster.
- * This is done in a way that the number of client connections is roughly the
- * same as the server connections.
- */
-void
-connect_alltoall()
+int time_sync_cmd(TimeSyncOptions& opts)
 {
-    tcp_socks.clear();
-    tcp_socks.resize(num_nodes);
-    int num_out_conns = num_nodes / 2;
-    if ((num_nodes % 2 == 0) && (local_rank >= num_nodes / 2)) {
-        num_out_conns--;
-    }
-    int num_in_conns = num_nodes - 1 - num_out_conns;
-
-    auto acceptor_thrd = rt::Thread([&] {
-        for (int i = 0; i < num_in_conns; i++) {
-            rt::TcpConn* c = listen_queue->Accept();
-            if (c == nullptr) {
-                panic("couldn't accept a connection");
-                return;
-            }
-
-            struct netaddr remote_addr = c->RemoteAddr();
-            bool found = false;
-            int r = 0;
-            for (auto& server_addr : server_list) {
-                if (remote_addr.ip == server_addr.ip &&
-                    remote_addr.port == server_addr.port) {
-                    found = true;
-                    tcp_socks[r].reset(c);
-                    log_info("node-%d: accept connection from node-%d",
-                            local_rank, r);
-                }
-                r++;
-            }
-            if (!found) {
-                panic("unexpected connection from %u:%u", remote_addr.ip,
-                        remote_addr.port);
-            }
-        }
-    });
-
-    for (int i = 1; i <= num_out_conns; i++) {
-        int r = (local_rank + i) % num_nodes;
-        rt::TcpConn* c = rt::TcpConn::Dial({0, 0}, server_list[r]);
-        if (c == nullptr) {
-            panic("couldn't reach node-%d", r);
-        }
-        tcp_socks[r].reset(c);
-        log_info("node-%d: establish connection to node-%d", local_rank, r);
-    }
-    acceptor_thrd.Join();
+    // fixme: move to time_sync.h
+    return 0;
 }
 
-void
-real_main(void* arg) {
-    cluster_init();
-    connect_alltoall();
-
+int verify_conn_cmd()
+{
     // Test all-to-all communication
-    int sum = local_rank;
-    for (auto& tcp_sock : tcp_socks) {
-        if (tcp_sock) {
-            tcp_sock->WriteFull(&local_rank, sizeof(local_rank));
-        }
+    int sum = cluster.local_rank;
+    for (auto& tcp_sock : cluster.tcp_socks) {
+        if (!tcp_sock) continue;
+        tcp_sock->WriteFull(&cluster.local_rank, sizeof(cluster.local_rank));
     }
-    for (auto& tcp_sock : tcp_socks) {
+    for (auto& tcp_sock : cluster.tcp_socks) {
         if (tcp_sock) {
             int r;
             tcp_sock->ReadFull(&r, sizeof(r));
             sum += r;
         }
     }
-    log_info("shuffle: sum of all ranks is %d", sum);
+    log_info("verify_conn_cmd: sum of all ranks is %d", sum);
+    return 0;
+}
+
+/**
+ * exec_words() - Given a command that has been parsed into words,
+ * execute the command corresponding to the words.
+ * @words:  Each entry represents one word of the command, like argc/argv.
+ *
+ * Return:  Nonzero means success, zero means there was an error.
+ */
+int exec_words(rt::vector<rt::string>& words)
+{
+	if (words.empty())
+		return 1;
+	if (words[0] == "verify_conn") {
+        return verify_conn_cmd();
+    } else if (words[0] == "setup_workload") {
+	    SetupWorkloadOptions opts;
+	    opts.parse_args(words);
+		return setup_workload_cmd(opts, current_op);
+	} else if (words[0] == "time_sync") {
+        TimeSyncOptions opts;
+        opts.parse_args(words);
+        return time_sync_cmd(opts);
+	} else if (words[0] == "run_bench") {
+        RunBenchOptions opts;
+        opts.parse_args(words);
+		return run_bench_cmd(opts);
+	} else if (words[0] == "exit") {
+		if (cmd_line_opts.log_file != stdout)
+			log_info("shuffle_node exiting (exit command)\n");
+		exit(0);
+	} else {
+		printf("Unknown command '%s'\n", words[0].c_str());
+		return 0;
+	}
+}
+
+/**
+ * exec_string() - Given a string, parse it into words and execute the
+ * resulting command.
+ * @cmd:  Command to execute.
+ */
+void exec_string(const char* cmd)
+{
+	const char *p = cmd;
+	rt::vector<rt::string> words;
+
+	if (cmd_line_opts.log_file != stdout)
+		log_info("Command: %s\n", cmd);
+
+	while (true) {
+		int word_length = strcspn(p, " \t\n");
+		if (word_length > 0)
+			words.emplace_back(p, word_length);
+		p += word_length;
+		if (*p == 0)
+			break;
+		p++;
+	}
+	exec_words(words);
+}
+
+void
+real_main(void* arg) {
+    cluster.init(&cmd_line_opts);
+    cluster.connect_all();
+
+    // Read commands from stdin and execute them.
+    rt::string line;
+    while (true) {
+        printf("%% ");
+        fflush(stdout);
+        if (!std::getline(std::cin, line)) {
+            if (cmd_line_opts.log_file != stdout)
+                log_info("cp_node exiting (EOF on stdin)\n");
+            return;
+        }
+        exec_string(line.c_str());
+    }
 }
 
 int main(int argc, char* argv[]) {
-    int ret;
-
 	if (((argc >= 2) && (strcmp(argv[1], "--help") == 0)) || (argc == 1)) {
 		print_help(argv[0]);
 		return 0;
 	}
 
-    std::vector<std::string> words;
-    for (int i = 2; i < argc; i++) {
-        words.emplace_back(argv[i]);
-    }
-    parse_args(words);
-
-    set_log_file(log_file);
-    ret = runtime_init(argv[1], real_main, nullptr);
+    cmd_line_opts.parse_args(argc-2, &argv[2]);
+    set_log_file(cmd_line_opts.log_file);
+    int ret = runtime_init(argv[1], real_main, nullptr);
     if (ret) {
         panic("failed to start Caladan runtime");
     }

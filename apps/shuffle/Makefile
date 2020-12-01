@@ -5,7 +5,7 @@ include $(ROOT_PATH)/build/shared.mk
 librt_libs = $(ROOT_PATH)/bindings/cc/librt++.a
 INC += -I$(ROOT_PATH)/bindings/cc
 
-shuffle_src = shuffle_node.cc shuffle_util.cc
+shuffle_src = cluster.cc shuffle_node.cc shuffle_tcp.cc options.cc workload.cc
 shuffle_obj = $(shuffle_src:.cc=.o)
 
 src = $(shuffle_src)

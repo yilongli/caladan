@@ -73,6 +73,24 @@ template<typename L> class ScopedLock {
   ScopedLock& operator=(const ScopedLock&) = delete;
 };
 
+// Semaphore support.
+class Semaphore {
+ public:
+  Semaphore(unsigned val) { sema_init(&sema_, val); }
+  ~Semaphore() { }
+
+  void Down() { sema_down(&sema_); }
+  void DownAll() { sema_down_all(&sema_); }
+  bool TryDown() { return sema_try_down(&sema_); }
+  void Up() { sema_up(&sema_); }
+
+ private:
+  sema_t sema_;
+
+  Semaphore(const Semaphore&) = delete;
+  Semaphore& operator=(const Semaphore&) = delete;
+};
+
 // Pthread-like condition variable support.
 class CondVar {
  public:
