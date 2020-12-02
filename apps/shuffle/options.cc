@@ -62,7 +62,7 @@ parse_netaddr(const char* str, struct netaddr* addr) {
  */
 void
 CommandLineOptions::parse_args(int argc, char* argv[]) {
-    for (size_t i = 0; i < argc; i++) {
+    for (int i = 0; i < argc; i++) {
         const char *option = argv[i];
         if (strcmp(option, "--ifname") == 0) {
             int local_ip = get_local_ip(argv[i+1]);
@@ -112,39 +112,66 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
  *
  * \param words
  *      Each entry represents one word of the command, like argc/argv.
+ * \return
+ *      True means success, false means there was an error.
  */
-void
+bool
 SetupWorkloadOptions::parse_args(rt::vector<rt::string> words)
 {
+    // FIXME: no need to panic if the parsing fails; this is a sub-command within
+    // the program so the error is totally recoverable (i mean, the python script
+    // probably issued the wrong command or something)
     assert(words[0] == "setup_workload");
-    for (size_t i = 0; i < words.size(); i++) {
+    for (size_t i = 1; i < words.size(); i++) {
         const char *option = words[i].c_str();
         if (strcmp(option, "--seed") == 0) {
             int seed;
-            if (!parse(words[i+1].c_str(), &seed, option, "integer"))
-                panic("failed to parse '%s %s'", option, words[i + 1].c_str());
+            if (!parse(words[i+1].c_str(), &seed, option, "integer")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
             rand_seed = seed;
             i++;
         } else if (strcmp(option, "--avg-msg-size") == 0) {
             int size;
-            if (!parse(words[i+1].c_str(), &size, option, "integer"))
-                panic("failed to parse '%s %s'", option, words[i+1].c_str());
+            if (!parse(words[i+1].c_str(), &size, option, "integer")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
             avg_message_size = size;
             i++;
         } else if (strcmp(option, "--msg-skew-factor") == 0) {
             if (!parse(words[i+1].c_str(), &msg_skew_factor, option, "double"))
-                panic("failed to parse '%s %s'", option, words[i+1].c_str());
+            {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
             i++;
         } else if (strcmp(option, "--part-skew-factor") == 0) {
             if (!parse(words[i+1].c_str(), &part_skew_factor, option, "double"))
-                panic("failed to parse '%s %s'", option, words[i+1].c_str());
+            {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
             i++;
         } else if (strcmp(option, "--skew-input") == 0) {
             skew_input = true;
         } else if (strcmp(option, "--skew-output") == 0) {
             skew_output = true;
         } else {
-            panic("Unknown option '%s'\n", option);
+            log_err("Unknown option '%s'\n", option);
+            return false;
         }
     }
+    return true;
 }
+
+void
+RunBenchOptions::parse_args(rt::vector<rt::string> words)
+{}
+
+void
+TimeSyncOptions::parse_args(rt::vector<rt::string> words)
+{}
+
+

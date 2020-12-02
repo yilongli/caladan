@@ -5,9 +5,6 @@
 #include <random>
 #include <stdexcept>
 
-/// Cluster of nodes used in the experiment; defined in shuffle_node.cc.
-extern Cluster cluster;
-
 /**
  * Zipf (Zeta) random distribution.
  *
@@ -273,10 +270,16 @@ gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
     return msg_sizes;
 }
 
-int
-setup_workload_cmd(SetupWorkloadOptions& opts, shuffle_op& op)
+bool
+setup_workload_cmd(rt::vector<rt::string> &words, Cluster &cluster,
+        shuffle_op &op)
 {
-    auto msg_sizes = gen_msg_sizes(opts.rand_seed, op.num_nodes,
+    SetupWorkloadOptions opts;
+    if (!opts.parse_args(words)) {
+        return false;
+    }
+
+    auto msg_sizes = gen_msg_sizes(opts.rand_seed, cluster.num_nodes,
             opts.msg_skew_factor, opts.part_skew_factor, opts.skew_input,
             opts.skew_output);
 
@@ -285,7 +288,7 @@ setup_workload_cmd(SetupWorkloadOptions& opts, shuffle_op& op)
     int local_rank = cluster.local_rank;
     size_t total_tx_bytes = 0;
     size_t total_rx_bytes = 0;
-    for (size_t peer = 0; peer < cluster.num_nodes; peer++) {
+    for (int peer = 0; peer < cluster.num_nodes; peer++) {
         total_tx_bytes += opts.avg_message_size * msg_sizes[local_rank][peer];
         total_rx_bytes += opts.avg_message_size * msg_sizes[peer][local_rank];
     }
@@ -308,11 +311,17 @@ setup_workload_cmd(SetupWorkloadOptions& opts, shuffle_op& op)
         size_t len = msg_sizes[local_rank][i] * opts.avg_message_size;
         op.out_msgs.emplace_back(start, len);
         start += len;
+        op.in_msgs.emplace_back(nullptr, 0);
     }
-    op.in_msgs.resize(cluster.num_nodes);
 
     // Clear the semaphore.
     while (op.acked_out_msgs.TryDown());
 
-    return 0;
+//    printf("total tx bytes: %lu\n", op.total_tx_bytes);
+//    printf("total rx bytes: %lu\n", op.total_rx_bytes);
+//    for (int i = 0; i < cluster.num_nodes; i++) {
+//        printf("len[%2d] = %lu\n", i, op.out_msgs[i].len);
+//    }
+
+    return true;
 }

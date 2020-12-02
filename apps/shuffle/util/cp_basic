@@ -14,8 +14,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-# This cperf benchmark computes basic latency and throughput numbers
-# for Homa and TCP.
+# This cperf benchmark computes XXX.
 
 from cperf import *
 
@@ -25,13 +24,23 @@ options = parser.parse_args()
 
 init(options)
 
-#
-command = "%s/%s %s --ifname %s --port %d --num-nodes %d --master-addr %s " \
-          "--log-file %s" % \
-          (options.shuffle_dir, options.shuffle_bin, options.caladan_cfg,
-           options.ifname, options.server_port, options.num_nodes,
-           options.master_addr, options.log_file)
-print(command)
-cluster_nodes = get_cluster_nodes(options.server_list)
-cluster_nodes = cluster_nodes[:options.num_nodes]
-cluster_exec(cluster_nodes, command)
+nodes = range(1, options.num_nodes + 1)
+if not options.plot_only:
+    command = "%s/%s %s --ifname %s --port %d --num-nodes %d --master-addr %s" \
+              " --log-file %s" % \
+              (options.shuffle_dir, options.shuffle_bin, options.caladan_cfg,
+               options.ifname, options.server_port, options.num_nodes,
+               options.master_addr, options.log_file)
+    try:
+        start_nodes(nodes, command)
+        do_cmd("log hello!", nodes)
+        do_cmd("verify_conn", nodes)
+        log("Stopping nodes")
+        stop_nodes()
+    except Exception as e:
+        vlog("Caught exception:\n\t" + str(e))
+        vlog("Cleaning up orphaned '%s' processes" % options.shuffle_bin)
+        do_ssh(["pkill", options.shuffle_bin], nodes)
+
+# Parse the log files to extract useful data
+# TODO: I don't have data yet

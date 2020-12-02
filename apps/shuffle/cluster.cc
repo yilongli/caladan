@@ -49,12 +49,12 @@ Cluster::init(CommandLineOptions* options)
             if (c == nullptr) {
                 panic("couldn't accept a connection");
             }
-            server_list.push_back(c->RemoteAddr());
+            server_list.emplace_back();
+            c->ReadFull(&server_list.back(), sizeof(netaddr));
             conns.emplace_back(c);
             char addr_str[32];
             netaddr_to_str(server_list[i], addr_str, 32);
-            log_info("node-0: accepted connection from node-%d (%s)", i,
-                    addr_str);
+            log_info("node-0: registered node-%d (%s)", i, addr_str);
         }
 
         // Broadcast the server list to all nodes.
@@ -67,6 +67,9 @@ Cluster::init(CommandLineOptions* options)
         if (c == nullptr) {
             panic("couldn't reach the master node");
         }
+        // Tell the master node about our server port number and receive the
+        // server list in return.
+        c->WriteFull(&options->local_addr, sizeof(netaddr));
         server_list.resize(num_nodes);
         c->ReadFull(&server_list[0], num_nodes * sizeof(netaddr));
 
@@ -107,22 +110,22 @@ Cluster::connect_all()
                 return;
             }
 
-            struct netaddr remote_addr = c->RemoteAddr();
+            // TODO: the following won't work if our nodes can have the same ip
+            netaddr remote_addr = c->RemoteAddr();
             bool found = false;
-            int r = 0;
-            for (auto& server_addr : server_list) {
-                if (remote_addr.ip == server_addr.ip &&
-                    remote_addr.port == server_addr.port) {
+            for (size_t r = 0; r < server_list.size(); r++) {
+                if (remote_addr.ip == server_list[r].ip) {
                     found = true;
                     tcp_socks[r].reset(c);
-                    log_info("node-%d: accept connection from node-%d",
+                    log_info("node-%d: accepted connection from node-%lu",
                             local_rank, r);
+                    break;
                 }
-                r++;
             }
             if (!found) {
-                panic("unexpected connection from %u:%u", remote_addr.ip,
-                        remote_addr.port);
+                char addr_str[32];
+                netaddr_to_str(remote_addr, addr_str, 32);
+                panic("unexpected connection from %s", addr_str);
             }
         }
     });
@@ -131,10 +134,12 @@ Cluster::connect_all()
         int r = (local_rank + i) % num_nodes;
         rt::TcpConn* c = rt::TcpConn::Dial({0, 0}, server_list[r]);
         if (c == nullptr) {
-            panic("couldn't reach node-%d", r);
+            char addr_str[32];
+            netaddr_to_str(server_list[r], addr_str, 32);
+            panic("couldn't reach node-%d (%s)", r, addr_str);
         }
         tcp_socks[r].reset(c);
-        log_info("node-%d: establish connection to node-%d", local_rank, r);
+        log_info("node-%d: connected to node-%d", local_rank, r);
     }
     acceptor_thrd.Join();
 }

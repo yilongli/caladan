@@ -110,7 +110,7 @@ struct SetupWorkloadOptions {
         , skew_output(false)
     {}
 
-    void parse_args(rt::vector<rt::string> words);
+    bool parse_args(rt::vector<rt::string> words);
 };
 
 struct RunBenchOptions {

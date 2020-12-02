@@ -70,27 +70,60 @@ void print_help(const char* exec_cmd) {
            "  --seg-size       Maximum bumber of bytes in message segment.\n"
            "  --times          Number of times to repeat the experiment.\n"
            "\n"
+           "log [msg]          Print all of the words that follow the command\n"
+           "                   as a message to the log.\n"
+           "\n"
            "exit               Exits the application.\n",
            exec_cmd
            );
     // FIXME: how to simulate the senario of 10000 sockets? should I implement it in another program?
 }
 
-int run_bench_cmd(RunBenchOptions& opts)
+/**
+ * Parse the arguments of a "run_bench" command and execute it.
+ *
+ * \param words
+ *      Command arguments (including the command name as @words[0]).
+ * \return
+ *      True means success, false means there was an error.
+ */
+bool
+run_bench_cmd(rt::vector<rt::string>& words)
 {
+    RunBenchOptions opts;
+    opts.parse_args(words);
+
     // fixme: move to run_bench.h?
 //    tcp_shuffle(c, op);
 //    tcp_epoll_shuffle(c);
-    return 0;
+    return true;
 }
 
-int time_sync_cmd(TimeSyncOptions& opts)
+/**
+ * Parse the arguments of a "time_sync" command and execute it.
+ *
+ * \param words
+ *      Command arguments (including the command name as @words[0]).
+ * \return
+ *      True means success, false means there was an error.
+ */
+bool
+time_sync_cmd(rt::vector<rt::string>& words)
 {
+    TimeSyncOptions opts;
+    opts.parse_args(words);
     // fixme: move to time_sync.h
-    return 0;
+    return true;
 }
 
-int verify_conn_cmd()
+/**
+ * Parse the arguments of a "verify_conn" command and execute it.
+ *
+ * \return
+ *      True means success, false means there was an error.
+ */
+bool
+verify_conn_cmd()
 {
     // Test all-to-all communication
     int sum = cluster.local_rank;
@@ -105,57 +138,94 @@ int verify_conn_cmd()
             sum += r;
         }
     }
-    log_info("verify_conn_cmd: sum of all ranks is %d", sum);
-    return 0;
+    int expected = (cluster.num_nodes - 1) * cluster.num_nodes / 2;
+    if (sum == expected) {
+        log_info("verify_conn: success");
+        return true;
+    } else {
+        log_err("verify_conn: unexpected sum of ranks %d", sum);
+        return false;
+    }
 }
 
 /**
- * exec_words() - Given a command that has been parsed into words,
- * execute the command corresponding to the words.
- * @words:  Each entry represents one word of the command, like argc/argv.
+ * Parse the arguments of a "log" command and execute it.
  *
- * Return:  Nonzero means success, zero means there was an error.
+ * \param words
+ *      Command arguments (including the command name as @words[0]).
+ * \return
+ *      True means success, false means there was an error.
  */
-int exec_words(rt::vector<rt::string>& words)
+bool
+log_cmd(rt::vector<rt::string>& words)
+{
+    assert(words[0] == "log");
+    for (size_t i = 1; i < words.size(); i++) {
+        const char* option = words[i].c_str();
+        if (strncmp(option, "--", 2) != 0) {
+            rt::string message;
+            for (size_t j = i; j < words.size(); j++) {
+                if (j != i)
+                    message.append(" ");
+                message.append(words[j]);
+            }
+            log_info("%s", message.c_str());
+            return true;
+        }
+    }
+    return true;
+}
+
+/**
+ * Given a command that has been parsed into words, execute the command
+ * corresponding to the words.
+ *
+ * \param words
+ *      Each entry represents one word of the command, like argc/argv.
+ * \return
+ *      True means success, false means there was an error.
+ */
+bool
+exec_words(rt::vector<rt::string>& words)
 {
 	if (words.empty())
-		return 1;
+		return true;
 	if (words[0] == "verify_conn") {
         return verify_conn_cmd();
     } else if (words[0] == "setup_workload") {
-	    SetupWorkloadOptions opts;
-	    opts.parse_args(words);
-		return setup_workload_cmd(opts, current_op);
+		return setup_workload_cmd(words, cluster, current_op);
 	} else if (words[0] == "time_sync") {
-        TimeSyncOptions opts;
-        opts.parse_args(words);
-        return time_sync_cmd(opts);
+        return time_sync_cmd(words);
 	} else if (words[0] == "run_bench") {
-        RunBenchOptions opts;
-        opts.parse_args(words);
-		return run_bench_cmd(opts);
+		return run_bench_cmd(words);
 	} else if (words[0] == "exit") {
 		if (cmd_line_opts.log_file != stdout)
-			log_info("shuffle_node exiting (exit command)\n");
+			log_info("shuffle_node exiting (exit command)");
 		exit(0);
+	} else if (words[0] == "log") {
+        return log_cmd(words);
 	} else {
-		printf("Unknown command '%s'\n", words[0].c_str());
-		return 0;
+		printf("Unknown command '%s'", words[0].c_str());
+		return false;
 	}
 }
 
 /**
- * exec_string() - Given a string, parse it into words and execute the
- * resulting command.
- * @cmd:  Command to execute.
+ * Given a string, parse it into words and execute the resulting command.
+ *
+ * \param cmd
+ *      Command to execute.
+ * \return
+ *      True means success, false means there was an error.
  */
-void exec_string(const char* cmd)
+bool
+exec_string(const char* cmd)
 {
 	const char *p = cmd;
 	rt::vector<rt::string> words;
 
 	if (cmd_line_opts.log_file != stdout)
-		log_info("Command: %s\n", cmd);
+		log_info("Command: %s", cmd);
 
 	while (true) {
 		int word_length = strcspn(p, " \t\n");
@@ -166,7 +236,7 @@ void exec_string(const char* cmd)
 			break;
 		p++;
 	}
-	exec_words(words);
+    return exec_words(words);
 }
 
 void
@@ -181,10 +251,13 @@ real_main(void* arg) {
         fflush(stdout);
         if (!std::getline(std::cin, line)) {
             if (cmd_line_opts.log_file != stdout)
-                log_info("cp_node exiting (EOF on stdin)\n");
+                log_info("cp_node exiting (EOF on stdin)");
             return;
         }
-        exec_string(line.c_str());
+
+        bool success = exec_string(line.c_str());
+        if (!success)
+            log_err("failed to execute command '%s'", line.c_str());
     }
 }
 
@@ -195,7 +268,7 @@ int main(int argc, char* argv[]) {
 	}
 
     cmd_line_opts.parse_args(argc-2, &argv[2]);
-    set_log_file(cmd_line_opts.log_file);
+    log_init(cmd_line_opts.log_file);
     int ret = runtime_init(argv[1], real_main, nullptr);
     if (ret) {
         panic("failed to start Caladan runtime");

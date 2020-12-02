@@ -1,6 +1,8 @@
 #pragma once
 
+#include "cluster.h"
 #include "options.h"
 #include "shuffle_common.h"
 
-int setup_workload_cmd(SetupWorkloadOptions& opts, shuffle_op& op);
+bool setup_workload_cmd(rt::vector<rt::string> &words, Cluster &cluster,
+        shuffle_op &op);

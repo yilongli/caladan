@@ -1,10 +1,21 @@
 #pragma once
 
+#include <atomic>
+#include <cstddef>
+
+#include "container.h"
+#include "sync.h"
+
 /**
  * Identifies the memory region used to store an inbound or outbound shuffle
  * message.
  */
 struct shfl_msg_buf {
+    explicit shfl_msg_buf(char* addr, size_t len)
+        : addr(addr)
+        , len(len)
+    {}
+
     char* addr;
     size_t len;
 };

@@ -33,7 +33,8 @@ void tcp_rx_thread_main(shuffle_op* op, int peer, rt::TcpConn* c,
             rx_bytes += msg_hdr.seg_size;
             if (rx_bytes == msg_size) {
                 rx_complete = true;
-                op->in_msgs[peer] = {buf, msg_size};
+                op->in_msgs[peer].addr = buf;
+                op->in_msgs[peer].len = msg_size;
             }
         }
     }
@@ -63,9 +64,10 @@ void tcp_tx_thread_main(rt::TcpConn* c, rt::Mutex* mutex, shfl_msg_buf out_msg)
 
 void tcp_shuffle(Cluster& c, shuffle_op& op)
 {
-    for (int i = 0; i < opts.max_unacked_msgs; i++) {
-        op.acked_out_msgs.Up();
-    }
+    // FIXME: how to pass in max_unacked_msgs?
+//    for (int i = 0; i < opts.max_unacked_msgs; i++) {
+//        op.acked_out_msgs.Up();
+//    }
 
     // step 1. issue a bunch of read uthreads
     rt::vector<rt::Thread> rx_threads;

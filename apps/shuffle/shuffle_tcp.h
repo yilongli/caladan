@@ -1,6 +1,7 @@
 #pragma once
 
 #include "shuffle_common.h"
+#include "cluster.h"
 
 #include <cstdint>
 

@@ -44,8 +44,11 @@ void logk(int level, const char *fmt, ...)
 
 	off = strlen(buf);
 	va_start(ptr, fmt);
-	vsnprintf(buf + off, MAX_LOG_LEN - off, fmt, ptr);
+	int n = vsnprintf(buf + off, MAX_LOG_LEN - off, fmt, ptr);
 	va_end(ptr);
+	off_t end = MIN(off + n, MAX_LOG_LEN - 2);
+	buf[end] = '\n';
+	buf[end + 1] = 0;
 	FILE* stream = log_file ? log_file : stdout;
 	fputs(buf, stream);
 
@@ -72,7 +75,15 @@ void logk_bug(bool fatal, const char *expr,
 		init_shutdown(EXIT_FAILURE);
 }
 
-void set_log_file(FILE* file)
+/**
+ * log_init - sets the stream where the messages should be written;
+ * this method should be called only once (best before @runtime_init)
+ * @file: the opened log file or NULL if stdout should be used for logging
+ */
+void log_init(FILE* file)
 {
-    log_file = file;
+    if (log_file)
+        log_err("log_file can only be set once");
+    else
+        log_file = file;
 }
