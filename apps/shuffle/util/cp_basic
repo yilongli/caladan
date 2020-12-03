@@ -26,15 +26,16 @@ init(options)
 
 nodes = range(1, options.num_nodes + 1)
 if not options.plot_only:
-    command = "%s/%s %s --ifname %s --port %d --num-nodes %d --master-addr %s" \
+    command = "%s/%s %s --ifname %s --num-nodes %d --master-addr %s" \
               " --log-file %s" % \
               (options.shuffle_dir, options.shuffle_bin, options.caladan_cfg,
-               options.ifname, options.server_port, options.num_nodes,
-               options.master_addr, options.log_file)
+               options.ifname, options.num_nodes, options.master_addr,
+               options.log_file)
     try:
         start_nodes(nodes, command)
+        do_cmd("tcp connect 5000", nodes)
         do_cmd("log hello!", nodes)
-        do_cmd("verify_conn", nodes)
+        do_cmd("setup_workload --seed 100 --avg-msg-size 1000 --msg-skew-factor 2.0", nodes)
         log("Stopping nodes")
         stop_nodes()
     except Exception as e:

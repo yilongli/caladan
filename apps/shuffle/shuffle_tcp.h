@@ -24,9 +24,4 @@ struct tcp_shuffle_msg_hdr {
     uint32_t msg_size;
 } __attribute__((__packed__));
 
-void
-tcp_rx_thread_main(shuffle_op* op, int peer, rt::TcpConn* c, rt::Mutex* mutex);
-
-void tcp_tx_thread_main(rt::TcpConn* c, rt::Mutex* mutex, shfl_msg_buf out_msg);
-
 void tcp_shuffle(Cluster &c, shuffle_op &op);

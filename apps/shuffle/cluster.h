@@ -15,9 +15,11 @@ struct Cluster {
 
     explicit Cluster()
         : num_nodes()
-        , local_addr()
-        , master_addr()
+        , local_ip()
         , local_rank(-1)
+        , tcp_server_port()
+        , master_node()
+        , bootstrap_queue()
         , listen_queue()
         , server_list()
         , tcp_socks()
@@ -25,25 +27,34 @@ struct Cluster {
     {}
 
     void init(CommandLineOptions* options);
-    void connect_all();
+    void connect_all(uint16_t port);
+    void disconnect();
 
     /// Number of nodes in the experiment.
     int num_nodes;
 
-    /// Network address of this node.
-    struct netaddr local_addr;
-
-    /// Network address of the master node in the cluster.
-    struct netaddr master_addr;
+    /// IP address of this node.
+    uint32_t local_ip;
 
     /// Rank of this node.
     int local_rank;
 
-    /// Listen queue used to accept incoming TCP connections.
+    /// Port number used to accept incoming TCP connections.
+    uint16_t tcp_server_port;
+
+    /// Network address of the master node in the cluster.
+    netaddr master_node;
+
+    /// Listen queue used to accept incoming TCP connections at cluster startup.
+    /// Only exist on the master node.
+    std::unique_ptr<rt::TcpQueue> bootstrap_queue;
+
+    /// Listen queue used to accept incoming TCP connections in response to
+    /// the "tcp connect" command.
     std::unique_ptr<rt::TcpQueue> listen_queue;
 
-    /// Network addresses of all the nodes in the cluster, ordered by rank.
-    rt::vector<struct netaddr> server_list;
+    /// IP addresses of all the nodes in the cluster, ordered by rank.
+    rt::vector<uint32_t> server_list;
 
     /// TCP connections to all the nodes in the cluster (except itself).
     rt::vector<std::unique_ptr<rt::TcpConn>> tcp_socks;
@@ -52,3 +63,5 @@ struct Cluster {
     /// tell ACKs from normal data).
     rt::vector<std::unique_ptr<rt::Mutex>> tcp_write_mutexes;
 };
+
+bool tcp_cmd(rt::vector<rt::string>& words, Cluster& cluster);

@@ -36,8 +36,6 @@ void print_help(const char* exec_cmd) {
            "--ifname           Symbolic name of the network interface this node"
            "                   will be using in the experiment; this determines"
            "                   the IP address of the node.\n"
-           "--port             Port number this node will be listening on for"
-           "                   incoming connections.\n"
            "--num-nodes        Total number of nodes in the experiment.\n"
            "--master-addr      Network address where the master server can be"
            "                   reached, in the form of <ip>:<port>"
@@ -48,10 +46,16 @@ void print_help(const char* exec_cmd) {
            "standard input and executing them as commands. The following\n"
            "commands are supported, each followed by a list of options\n"
            "supported by that command:\n\n"
-           "verify_conn        Check all-to-all connectivity in the cluster\n"
-           "                   by performing an all-reduce on the node ranks.\n"
+           "tcp                Manage TCP connections within the cluster:\n"
+           "  connect [port]   Establish all-to-all TCP connections between\n"
+           "                   nodes in the cluster using a specific port\n"
+           "                   to accept incoming connections."
+           "  verify           Verify if every node is connected to every\n"
+           "                   other nodes in the cluster.\n"
+           "  disconnect       Tear down all TCP connections.\n"
            "\n"
-           "setup_workload     Configure the shuffle workload.\n"
+           "gen_workload       Generate a shuffle workload as determined by\n"
+           "                   the options.\n"
            "  --seed           Seed value used to generate the message sizes.\n"
            "  --avg-msg-size   Average length of the shuffle messages.\n"
            "  --skew-factor    Message skew factor (TODO: XXX).\n"
@@ -64,19 +68,23 @@ void print_help(const char* exec_cmd) {
            "  --protocol       Transport protocol to use: homa or tcp\n"
            "  --epoll          Use epoll for efficient monitoring of incoming\n"
            "                   data at TCP sockets.\n"
-           "  --policy         random, round-robin, or \"high-entropy\"\n"
+           "  --policy         hadoop, lockstep, or LRPT\n"
            "  --max-unacked    Maximum number of outbound messages which can\n"
            "                   be in progress at any time.\n"
-           "  --seg-size       Maximum bumber of bytes in message segment.\n"
+           "  --seg-size       Maximum number of bytes in a message segment.\n"
            "  --times          Number of times to repeat the experiment.\n"
            "\n"
            "log [msg]          Print all of the words that follow the command\n"
            "                   as a message to the log.\n"
            "\n"
-           "exit               Exits the application.\n",
+           "exit               Exit the application.\n",
            exec_cmd
            );
+    // TODO: should I give up homa in this project and use udp instead? the "thread_local" problem in shenango is really annoying when trying to do anything non-trivial
+    // TODO: implement --epoll properly
+    // FIXME: add command "tt" for timetrace
     // FIXME: how to simulate the senario of 10000 sockets? should I implement it in another program?
+    // TODO: get memory intensive background traffic workload up and running (can we add an option like --add-interference)
 }
 
 /**
@@ -114,38 +122,6 @@ time_sync_cmd(rt::vector<rt::string>& words)
     opts.parse_args(words);
     // fixme: move to time_sync.h
     return true;
-}
-
-/**
- * Parse the arguments of a "verify_conn" command and execute it.
- *
- * \return
- *      True means success, false means there was an error.
- */
-bool
-verify_conn_cmd()
-{
-    // Test all-to-all communication
-    int sum = cluster.local_rank;
-    for (auto& tcp_sock : cluster.tcp_socks) {
-        if (!tcp_sock) continue;
-        tcp_sock->WriteFull(&cluster.local_rank, sizeof(cluster.local_rank));
-    }
-    for (auto& tcp_sock : cluster.tcp_socks) {
-        if (tcp_sock) {
-            int r;
-            tcp_sock->ReadFull(&r, sizeof(r));
-            sum += r;
-        }
-    }
-    int expected = (cluster.num_nodes - 1) * cluster.num_nodes / 2;
-    if (sum == expected) {
-        log_info("verify_conn: success");
-        return true;
-    } else {
-        log_err("verify_conn: unexpected sum of ranks %d", sum);
-        return false;
-    }
 }
 
 /**
@@ -190,8 +166,8 @@ exec_words(rt::vector<rt::string>& words)
 {
 	if (words.empty())
 		return true;
-	if (words[0] == "verify_conn") {
-        return verify_conn_cmd();
+	if (words[0] == "tcp") {
+        return tcp_cmd(words, cluster);
     } else if (words[0] == "setup_workload") {
 		return setup_workload_cmd(words, cluster, current_op);
 	} else if (words[0] == "time_sync") {
@@ -242,7 +218,6 @@ exec_string(const char* cmd)
 void
 real_main(void* arg) {
     cluster.init(&cmd_line_opts);
-    cluster.connect_all();
 
     // Read commands from stdin and execute them.
     rt::string line;

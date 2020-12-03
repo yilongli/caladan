@@ -64,7 +64,6 @@ default_defaults = {
     'shuffle_bin':         'shuffle_node',
     'caladan_cfg':         '~/caladan.config',
     'ifname':              'eno1d1',
-    'server_port':         5000,
     'master_addr':         '10.10.1.2:5000',
     'log_dir':             'logs/' + time.strftime('%Y%m%d%H%M%S'),
     'log_file':            'node.log',
@@ -135,10 +134,6 @@ def get_parser(description, usage, defaults = {}):
     parser.add_argument('--ifname', dest='ifname', default=defaults['ifname'],
             help='Symbolic name of the network interface to use (default: %s)'
             % (defaults['ifname']))
-    parser.add_argument('--server-port', type=int, dest='server_port',
-            default=defaults['server_port'],
-            help='Server port number used by the application (default: %d)'
-            % (defaults['server_port']))
     parser.add_argument('--num-nodes', type=int, dest='num_nodes',
             help='Number of nodes used in the experiment')
     parser.add_argument('--master-addr', dest='master_addr',

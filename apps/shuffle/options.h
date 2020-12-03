@@ -56,19 +56,19 @@ struct CommandLineOptions {
 
     explicit CommandLineOptions()
         : num_nodes(-1)
-        , local_addr()
-        , master_addr()
+        , local_ip()
+        , master_node()
         , log_file(stdout)
     {}
 
     /// Number of nodes in the experiment.
     int num_nodes;
 
-    /// Network address of this node.
-    netaddr local_addr;
+    /// IP address of this node.
+    uint32_t local_ip;
 
     /// Network address of the master node in the cluster.
-    netaddr master_addr;
+    netaddr master_node;
 
     /// File to write the log messages into.
     FILE* log_file;

@@ -65,23 +65,17 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
     for (int i = 0; i < argc; i++) {
         const char *option = argv[i];
         if (strcmp(option, "--ifname") == 0) {
-            int local_ip = get_local_ip(argv[i+1]);
-            if (local_ip < 0)
+            int ip = get_local_ip(argv[i+1]);
+            if (ip < 0)
                 panic("Unknown interface '%s'", argv[i+1]);
-            local_addr.ip = local_ip;
-            i++;
-        } else if (strcmp(option, "--port") == 0) {
-            int local_port;
-            if (!parse(argv[i+1], &local_port, option, "integer"))
-                panic("failed to parse '--port %s'", argv[i+1]);
-            local_addr.port = local_port;
+            local_ip = ip;
             i++;
         } else if (strcmp(option, "--num-nodes") == 0) {
             if (!parse(argv[i+1], &num_nodes, option, "integer"))
                 panic("failed to parse '--num-nodes %s'", argv[i+1]);
             i++;
         } else if (strcmp(option, "--master-addr") == 0) {
-            int ret = parse_netaddr(argv[i+1], &master_addr);
+            int ret = parse_netaddr(argv[i+1], &master_node);
             if (ret < 0)
                 panic("failed to parse '--master-addr %s'", argv[i+1]);
             i++;
@@ -96,13 +90,11 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
         }
     }
 
-    if (local_addr.ip == 0) {
+    if (local_ip == 0) {
         panic("failed to initialize local IP address");
-    } else if (local_addr.port == 0) {
-        panic("failed to initialize local port number");
     } else if (num_nodes < 0) {
         panic("failed to initialize the number of nodes");
-    } else if (master_addr.ip == 0) {
+    } else if (master_node.ip == 0) {
         panic("failed to initialize the address of the master node");
     }
 }
@@ -118,9 +110,6 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
 bool
 SetupWorkloadOptions::parse_args(rt::vector<rt::string> words)
 {
-    // FIXME: no need to panic if the parsing fails; this is a sub-command within
-    // the program so the error is totally recoverable (i mean, the python script
-    // probably issued the wrong command or something)
     assert(words[0] == "setup_workload");
     for (size_t i = 1; i < words.size(); i++) {
         const char *option = words[i].c_str();
