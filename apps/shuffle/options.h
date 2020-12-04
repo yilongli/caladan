@@ -1,11 +1,17 @@
 #pragma once
 
 #include <cstdio>
+#include <string>
+#include <vector>
 
-#include "container.h"
 #include "net.h"
 
 inline void parse_type(const char *s, char **end, int *value)
+{
+	*value = strtol(s, end, 0);
+}
+
+inline void parse_type(const char *s, char **end, size_t *value)
 {
 	*value = strtol(s, end, 0);
 }
@@ -110,18 +116,51 @@ struct SetupWorkloadOptions {
         , skew_output(false)
     {}
 
-    bool parse_args(rt::vector<rt::string> words);
+    bool parse_args(std::vector<std::string> words);
+};
+
+enum ShufflePolicy {
+    HADOOP = 0,
+    LOCKSTEP = 1,
+    LRPT = 2
 };
 
 struct RunBenchOptions {
 
+    /// True means TCP should be used to send and receive messages. False means
+    /// UDP will be used instead.
+    bool tcp_protocol;
+
+    /// True means epoll should be used to monitor incoming data; false means
+    /// lightweight user-threads will simply issue blocking IO operations.
+    bool use_epoll;
+
+    /// Policy used to schedule shuffle (e.g., which message to transmit next
+    /// and how many bytes to transmit).
+    ShufflePolicy policy;
+
+    /// Maximum of outbound messages which can be in progress at any time.
+    /// Only used when the policy is HADOOP.
     size_t max_unacked_msgs;
 
+    /// In practice, shuffle messages often need to be divided and transmitted
+    /// in segments. This value determines the maximum number of bytes in a
+    /// message segment.
+    size_t max_seg;
+
+    /// Number of times to repeat the experiment.
+    size_t times;
+
     explicit RunBenchOptions()
-        : max_unacked_msgs(1)
+        : tcp_protocol(true)
+        , use_epoll(false)
+        , policy(ShufflePolicy::HADOOP)
+        , max_unacked_msgs(1)
+        , max_seg(1400)
+        , times(0)
     {}
 
-    void parse_args(rt::vector<rt::string> words);
+    bool parse_args(std::vector<std::string> words);
 };
 
 struct TimeSyncOptions {
@@ -137,5 +176,5 @@ struct TimeSyncOptions {
         , duration(1)
     {}
 
-    void parse_args(rt::vector<rt::string> words);
+    bool parse_args(std::vector<std::string> words);
 };

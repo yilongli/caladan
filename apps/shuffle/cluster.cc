@@ -5,6 +5,7 @@ extern "C" {
 #include <net/ip.h>
 }
 
+#include <algorithm>
 #include "thread.h"
 
 void
@@ -32,39 +33,44 @@ Cluster::init(CommandLineOptions* options)
     assert(server_list.empty());
     bool is_master = (local_ip == master_node.ip);
     if (is_master) {
-        bootstrap_queue.reset(rt::TcpQueue::Listen(master_node, 4096));
-        if (!bootstrap_queue) {
+        // Use a temporary listen queue to establish control channels, which
+        // will be teared down afterwards.
+        std::unique_ptr<rt::TcpQueue> listen_queue(
+                rt::TcpQueue::Listen(master_node, 4096));
+        if (!listen_queue) {
             panic("master node couldn't listen for connections");
         }
 
         // Wait for the other nodes to contact us; assign ranks in order.
-        // The incoming connections will be teared down afterwards.
         local_rank = 0;
         server_list.push_back(master_node.ip);
-        rt::vector<std::unique_ptr<rt::TcpConn>> tmp_conns;
         for (int i = 1; i < num_nodes; i++) {
-            rt::TcpConn* c = bootstrap_queue->Accept();
+            rt::TcpConn* c = listen_queue->Accept();
             if (c == nullptr) {
                 panic("couldn't accept a connection");
             }
-            tmp_conns.emplace_back(c);
+            control_socks.emplace_back(c);
             server_list.push_back(c->RemoteAddr().ip);
             char ip_str[32];
             ip_addr_to_str(server_list[i], ip_str);
             log_info("node-0: registered node-%d (%s)", i, ip_str);
         }
 
+        // Sort the server list so that the ranks are deterministic across runs.
+        std::sort(server_list.begin(), server_list.end());
+
         // Broadcast the server list to all nodes.
-        for (auto& conn : tmp_conns) {
+        for (auto& ctrl_chan : control_socks) {
             const size_t elem_size = sizeof(decltype(server_list)::value_type);
-            conn->WriteFull(server_list.data(), num_nodes * elem_size);
+            ctrl_chan->WriteFull(server_list.data(), num_nodes * elem_size);
         }
     } else {
         // Sign up with the master node to obtain the server list.
-        std::unique_ptr<rt::TcpConn> c(rt::TcpConn::Dial({0, 0}, master_node));
-        if (c == nullptr) {
+        rt::TcpConn* c = rt::TcpConn::Dial({0, 0}, master_node);
+        if (!c) {
             panic("couldn't reach the master node");
         }
+        control_socks.emplace_back(c);
         // Tell the master node about our server port number and receive the
         // server list in return.
         server_list.resize(num_nodes);
@@ -107,9 +113,10 @@ Cluster::connect_all(uint16_t port)
     }
     int num_in_conns = num_nodes - 1 - num_out_conns;
 
-    // Create a new listen queue to accept incoming connections.
-    listen_queue.reset(rt::TcpQueue::Listen({local_ip, tcp_server_port}, 4096));
-    if (listen_queue == nullptr) {
+    // Create a temporary listen queue to accept incoming connections.
+    std::unique_ptr<rt::TcpQueue> listen_queue(
+            rt::TcpQueue::Listen({local_ip, tcp_server_port}, 4096));
+    if (!listen_queue) {
         panic("couldn't listen for connections");
     }
 
@@ -161,7 +168,6 @@ Cluster::disconnect()
     tcp_server_port = 0;
     tcp_socks.clear();
     tcp_socks.resize(num_nodes);
-    listen_queue.reset();
 }
 
 /**
@@ -203,7 +209,7 @@ verify_tcp(Cluster& cluster)
  *      True means success, false means there was an error.
  */
 bool
-tcp_cmd(rt::vector<rt::string>& words, Cluster& cluster)
+tcp_cmd(std::vector<std::string>& words, Cluster& cluster)
 {
     assert(words[0] == "tcp");
     for (size_t i = 1; i < words.size(); i++) {

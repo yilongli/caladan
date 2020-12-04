@@ -24,4 +24,4 @@ struct tcp_shuffle_msg_hdr {
     uint32_t msg_size;
 } __attribute__((__packed__));
 
-void tcp_shuffle(Cluster &c, shuffle_op &op);
+bool tcp_shuffle(RunBenchOptions& opts, Cluster &c, shuffle_op &op);

@@ -5,8 +5,10 @@ include $(ROOT_PATH)/build/shared.mk
 librt_libs = $(ROOT_PATH)/bindings/cc/librt++.a
 INC += -I$(ROOT_PATH)/bindings/cc
 
-shuffle_src = cluster.cc shuffle_node.cc shuffle_tcp.cc options.cc workload.cc
+shuffle_src = $(wildcard *.cc)
 shuffle_obj = $(shuffle_src:.cc=.o)
+
+lib_shim = $(ROOT_PATH)/shim/libshim.a -ldl
 
 src = $(shuffle_src)
 obj = $(src:.cc=.o)
@@ -16,7 +18,7 @@ dep = $(obj:.o=.d)
 all: shuffle_node
 
 shuffle_node: $(shuffle_obj) $(librt_libs) $(RUNTIME_DEPS)
-	$(LDXX) -o $@ $(LDFLAGS) $(obj) $(librt_libs) $(RUNTIME_LIBS) $(LIBS)
+	$(LDXX) -o $@ $(LDFLAGS) $(lib_shim) $(obj) $(librt_libs) $(RUNTIME_LIBS)
 
 ifneq ($(MAKECMDGOALS),clean)
 -include $(dep)   # include all dep files in the makefile

@@ -2,7 +2,6 @@
 
 #include <atomic>
 
-#include "container.h"
 #include "thread.h"
 
 void tcp_rx_thread_main(shuffle_op* op, int peer, rt::TcpConn* c,
@@ -62,15 +61,16 @@ void tcp_tx_thread_main(rt::TcpConn* c, rt::Mutex* mutex, shfl_msg_buf out_msg)
     }
 }
 
-void tcp_shuffle(Cluster& c, shuffle_op& op)
+bool
+tcp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
 {
-    // FIXME: how to pass in max_unacked_msgs?
-//    for (int i = 0; i < opts.max_unacked_msgs; i++) {
-//        op.acked_out_msgs.Up();
-//    }
+    // FIXME: need to reset op; or should I do it in the caller?
+
+    // Initialize the semaphore
+    op.acked_out_msgs.reset(new rt::Semaphore(opts.max_unacked_msgs));
 
     // step 1. issue a bunch of read uthreads
-    rt::vector<rt::Thread> rx_threads;
+    std::vector<rt::Thread> rx_threads;
     rx_threads.reserve(c.num_nodes);
     for (int peer = 0; peer < c.num_nodes; peer++) {
         if (peer != c.local_rank) {
@@ -83,7 +83,7 @@ void tcp_shuffle(Cluster& c, shuffle_op& op)
     }
 
     // step 2: shuffle the order of out msgs, keep X out msgs concurrently.
-    rt::vector<int> peers(c.num_nodes);
+    std::vector<int> peers(c.num_nodes);
     // TODO: shuffle @peers
     for (int i = 0; i < c.num_nodes; i++) {
         peers[i] = i;
@@ -114,4 +114,5 @@ void tcp_shuffle(Cluster& c, shuffle_op& op)
         rx_threads.back().Join();
         rx_threads.pop_back();
     }
+    return true;
 }

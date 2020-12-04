@@ -19,14 +19,16 @@ extern "C" {
 #include "shuffle_tcp.h"
 #include "workload.h"
 
+// FIXME: avoid static initializer, so only use ptr type for static var???
+
 /// Command-line options.
-static CommandLineOptions cmd_line_opts;
+static CommandLineOptions* cmd_line_opts;
 
 /// Cluster of nodes used in the experiment.
-static Cluster cluster;
+static Cluster* cluster;
 
 /// Current shuffle workload.
-static shuffle_op current_op;
+static shuffle_op* current_op;
 
 void print_help(const char* exec_cmd) {
     printf("Usage: %s [caladan-config] [options]\n\n"
@@ -71,7 +73,7 @@ void print_help(const char* exec_cmd) {
            "  --policy         hadoop, lockstep, or LRPT\n"
            "  --max-unacked    Maximum number of outbound messages which can\n"
            "                   be in progress at any time.\n"
-           "  --seg-size       Maximum number of bytes in a message segment.\n"
+           "  --max-seg        Maximum number of bytes in a message segment.\n"
            "  --times          Number of times to repeat the experiment.\n"
            "\n"
            "log [msg]          Print all of the words that follow the command\n"
@@ -96,14 +98,54 @@ void print_help(const char* exec_cmd) {
  *      True means success, false means there was an error.
  */
 bool
-run_bench_cmd(rt::vector<rt::string>& words)
+run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
 {
-    RunBenchOptions opts;
-    opts.parse_args(words);
+    // fixme: move this method to run_bench.h?
 
-    // fixme: move to run_bench.h?
-//    tcp_shuffle(c, op);
-//    tcp_epoll_shuffle(c);
+    RunBenchOptions opts;
+    if (!opts.parse_args(words)) {
+        return false;
+    }
+
+    // FIXME: udp shuffle not implemented.
+    if (!opts.tcp_protocol)
+        return false;
+
+    char ctrl_msg[32] = {};
+    bool is_master = (cluster->local_rank == 0);
+    for (size_t run = 0; run < opts.times; run++) {
+        // Reset the shuffle_op object.
+        op.in_msgs.clear();
+        op.in_msgs.resize(cluster->num_nodes);
+        op.next_inmsg_addr = op.rx_data.get();
+        op.acked_out_msgs.reset(nullptr);
+
+        // The master node broadcasts while the followers block.
+        if (!is_master) {
+            cluster->control_socks[0]->ReadFull(ctrl_msg, 2);
+            assert(strncmp(ctrl_msg, "GO", 2) == 0);
+        } else {
+            for (auto& c : cluster->control_socks) {
+                c->WriteFull("GO", 2);
+            }
+        }
+
+        // FIXME: the following piece of code seems awkward
+        bool success = tcp_shuffle(opts, *cluster, op);
+        if (!success) {
+            return false;
+        }
+
+        // The master node blocks until all followers complete.
+        if (!is_master) {
+            cluster->control_socks[0]->WriteFull("DONE", 4);
+        } else {
+            for (auto& c : cluster->control_socks) {
+                c->ReadFull(ctrl_msg, 4);
+                assert(strncmp(ctrl_msg, "DONE", 4) == 0);
+            }
+        }
+    }
     return true;
 }
 
@@ -116,7 +158,7 @@ run_bench_cmd(rt::vector<rt::string>& words)
  *      True means success, false means there was an error.
  */
 bool
-time_sync_cmd(rt::vector<rt::string>& words)
+time_sync_cmd(std::vector<std::string>& words)
 {
     TimeSyncOptions opts;
     opts.parse_args(words);
@@ -133,13 +175,13 @@ time_sync_cmd(rt::vector<rt::string>& words)
  *      True means success, false means there was an error.
  */
 bool
-log_cmd(rt::vector<rt::string>& words)
+log_cmd(std::vector<std::string>& words)
 {
     assert(words[0] == "log");
     for (size_t i = 1; i < words.size(); i++) {
         const char* option = words[i].c_str();
         if (strncmp(option, "--", 2) != 0) {
-            rt::string message;
+            std::string message;
             for (size_t j = i; j < words.size(); j++) {
                 if (j != i)
                     message.append(" ");
@@ -162,20 +204,20 @@ log_cmd(rt::vector<rt::string>& words)
  *      True means success, false means there was an error.
  */
 bool
-exec_words(rt::vector<rt::string>& words)
+exec_words(std::vector<std::string>& words)
 {
 	if (words.empty())
 		return true;
 	if (words[0] == "tcp") {
-        return tcp_cmd(words, cluster);
+        return tcp_cmd(words, *cluster);
     } else if (words[0] == "setup_workload") {
-		return setup_workload_cmd(words, cluster, current_op);
+		return setup_workload_cmd(words, *cluster, *current_op);
 	} else if (words[0] == "time_sync") {
         return time_sync_cmd(words);
 	} else if (words[0] == "run_bench") {
-		return run_bench_cmd(words);
+		return run_bench_cmd(words, *current_op);
 	} else if (words[0] == "exit") {
-		if (cmd_line_opts.log_file != stdout)
+		if (cmd_line_opts->log_file != stdout)
 			log_info("shuffle_node exiting (exit command)");
 		exit(0);
 	} else if (words[0] == "log") {
@@ -198,9 +240,9 @@ bool
 exec_string(const char* cmd)
 {
 	const char *p = cmd;
-	rt::vector<rt::string> words;
+	std::vector<std::string> words;
 
-	if (cmd_line_opts.log_file != stdout)
+	if (cmd_line_opts->log_file != stdout)
 		log_info("Command: %s", cmd);
 
 	while (true) {
@@ -217,15 +259,17 @@ exec_string(const char* cmd)
 
 void
 real_main(void* arg) {
-    cluster.init(&cmd_line_opts);
+    Cluster cls;
+    cluster = &cls;
+    cluster->init(cmd_line_opts);
 
     // Read commands from stdin and execute them.
-    rt::string line;
+    std::string line;
     while (true) {
         printf("%% ");
         fflush(stdout);
         if (!std::getline(std::cin, line)) {
-            if (cmd_line_opts.log_file != stdout)
+            if (cmd_line_opts->log_file != stdout)
                 log_info("cp_node exiting (EOF on stdin)");
             return;
         }
@@ -242,8 +286,11 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 
-    cmd_line_opts.parse_args(argc-2, &argv[2]);
-    log_init(cmd_line_opts.log_file);
+	CommandLineOptions opts;
+    cmd_line_opts = &opts;
+    opts.parse_args(argc-2, &argv[2]);
+    log_init(opts.log_file);
+
     int ret = runtime_init(argv[1], real_main, nullptr);
     if (ret) {
         panic("failed to start Caladan runtime");

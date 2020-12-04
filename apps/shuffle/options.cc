@@ -108,7 +108,7 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
  *      True means success, false means there was an error.
  */
 bool
-SetupWorkloadOptions::parse_args(rt::vector<rt::string> words)
+SetupWorkloadOptions::parse_args(std::vector<std::string> words)
 {
     assert(words[0] == "setup_workload");
     for (size_t i = 1; i < words.size(); i++) {
@@ -155,12 +155,82 @@ SetupWorkloadOptions::parse_args(rt::vector<rt::string> words)
     return true;
 }
 
-void
-RunBenchOptions::parse_args(rt::vector<rt::string> words)
-{}
+/**
+ * Parse the arguments for the "run_bench" command.
+ *
+ * \param words
+ *      Each entry represents one word of the command, like argc/argv.
+ * \return
+ *      True means success, false means there was an error.
+ */
+bool
+RunBenchOptions::parse_args(std::vector<std::string> words)
+{
+    assert(words[0] == "run_bench");
+    for (size_t i = 1; i < words.size(); i++) {
+        const char *option = words[i].c_str();
+        if (strcmp(option, "--protocol") == 0) {
+            if (words[i+1] == "tcp") {
+                tcp_protocol = true;
+            } else if (words[i+1] == "udp") {
+                tcp_protocol = false;
+            } else {
+                log_err("Unknown protocol '%s'\n", words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else if (strcmp(option, "--epoll") == 0) {
+            use_epoll = true;
+            i++;
+        } else if (strcmp(option, "--policy") == 0) {
+            if (words[i+1] == "hadoop") {
+                policy = ShufflePolicy::HADOOP;
+            } else if (words[i+1] == "lockstep") {
+                policy = ShufflePolicy::LOCKSTEP;
+            } else if (words[i+1] == "LRPT") {
+                policy = ShufflePolicy::LRPT;
+            } else {
+                log_err("Unknown policy '%s'\n", words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else if (strcmp(option, "--max-unacked") == 0) {
+            if (!parse(words[i + 1].c_str(), &max_unacked_msgs, option,
+                    "unsigned")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else if (strcmp(option, "--max-seg") == 0) {
+            if (!parse(words[i+1].c_str(), &max_seg, option, "unsigned")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else if (strcmp(option, "--times") == 0) {
+            if (!parse(words[i+1].c_str(), &times, option, "unsigned")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else {
+            log_err("Unknown option '%s'\n", option);
+            return false;
+        }
+    }
+    return true;
+}
 
-void
-TimeSyncOptions::parse_args(rt::vector<rt::string> words)
+/**
+ * Parse the arguments for the "time_sync" command.
+ *
+ * \param words
+ *      Each entry represents one word of the command, like argc/argv.
+ * \return
+ *      True means success, false means there was an error.
+ */
+bool
+TimeSyncOptions::parse_args(std::vector<std::string> words)
 {}
 
 

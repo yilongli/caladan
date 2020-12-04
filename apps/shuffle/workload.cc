@@ -195,15 +195,15 @@ private:
  *      the message sent from node i to node j will be set to 1.2x of the
  *      average message size).
  */
-rt::vector<rt::vector<double>>
+std::vector<std::vector<double>>
 gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
         double part_skew_factor, bool skew_input, bool skew_output) {
     std::mt19937 gen(rand_seed);
     zipf_distribution<> zipf(30000, msg_skew_factor);
 
-    rt::vector<rt::vector<double>> msg_sizes;
-    rt::vector<rt::vector<int>> nodes;
-    rt::vector<std::tuple<int, int, int>> ext_keys;
+    std::vector<std::vector<double>> msg_sizes;
+    std::vector<std::vector<int>> nodes;
+    std::vector<std::tuple<int, int, int>> ext_keys;
 
     // Compute how far a splitter of the input or output partitions is allowed
     // to move. If the partition skew factor is r (i.e., the largest partition
@@ -214,7 +214,7 @@ gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
     int offset_lim = avg_keys_per_node * offset_ratio;
 
     // Construct input partitions (potentially skewed)
-    rt::vector<int> num_keys(num_nodes, avg_keys_per_node);
+    std::vector<int> num_keys(num_nodes, avg_keys_per_node);
     if (skew_input && (offset_lim > 0)) {
         int offset;
         for (int node_id = 0; node_id < num_nodes - 1; node_id++) {
@@ -233,15 +233,10 @@ gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
         }
     }
 
-    // Disable preemption before std::sort since standard library algorithms
-    // may allocate heap memory freely.
-    preempt_disable();
-    std::sort(ext_keys.begin(), ext_keys.end());
-    preempt_enable();
-
     // Construct output partitions.
     int k = -1;
-    rt::vector<decltype(ext_keys)::value_type> splitters;
+    std::sort(ext_keys.begin(), ext_keys.end());
+    std::vector<decltype(ext_keys)::value_type> splitters;
     for (int i = 0; i < num_nodes; i++) {
         k += avg_keys_per_node;
         int offset = 0;
@@ -271,7 +266,7 @@ gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
 }
 
 bool
-setup_workload_cmd(rt::vector<rt::string> &words, Cluster &cluster,
+setup_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
         shuffle_op &op)
 {
     SetupWorkloadOptions opts;
@@ -297,25 +292,20 @@ setup_workload_cmd(rt::vector<rt::string> &words, Cluster &cluster,
     op.num_nodes = cluster.num_nodes;
     op.total_tx_bytes = total_tx_bytes;
     op.total_rx_bytes = total_rx_bytes;
-    preempt_disable();
-    op.tx_data = new char[total_tx_bytes];
-    op.rx_data = new char[total_rx_bytes];
-    preempt_enable();
-    op.next_inmsg_addr.store(op.rx_data);
+    op.tx_data.reset(new char[total_tx_bytes]);
+    op.rx_data.reset(new char[total_rx_bytes]);
+    op.next_inmsg_addr.store(op.rx_data.get());
 
-    // Set the length for outbound messages.
+    // Set up the outbound messages and initialize the inbound messages.
     op.out_msgs.clear();
-    op.in_msgs.clear();
-    char* start = op.tx_data;
+    char* start = op.tx_data.get();
     for (int i = 0; i < cluster.num_nodes; i++) {
         size_t len = msg_sizes[local_rank][i] * opts.avg_message_size;
         op.out_msgs.emplace_back(start, len);
         start += len;
-        op.in_msgs.emplace_back(nullptr, 0);
     }
-
-    // Clear the semaphore.
-    while (op.acked_out_msgs.TryDown());
+    op.in_msgs.clear();
+    op.in_msgs.resize(cluster.num_nodes);
 
 //    printf("total tx bytes: %lu\n", op.total_tx_bytes);
 //    printf("total rx bytes: %lu\n", op.total_rx_bytes);
