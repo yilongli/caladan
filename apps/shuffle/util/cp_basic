@@ -20,6 +20,7 @@ from cperf import *
 
 parser = get_parser(description='Basic shuffle benchmark.',
         usage='%(prog)s [options]', defaults={})
+parser.usage = parser.format_help()
 options = parser.parse_args()
 
 init(options)
@@ -32,15 +33,17 @@ if not options.plot_only:
                options.ifname, options.num_nodes, options.master_addr,
                options.log_file)
     try:
+        log("Starting nodes with command:\n%s" % command)
         start_nodes(nodes, command)
         do_cmd("tcp connect 5000", nodes)
         do_cmd("log hello!", nodes)
-        do_cmd("setup_workload --seed 100 --avg-msg-size 1000 --msg-skew-factor 2.0", nodes)
+        do_cmd("gen_workload --seed 100 --avg-msg-size 1000 --msg-skew-factor 2.0", nodes)
+        do_cmd("run_bench --protocol tcp --policy hadoop --times 10", nodes)
         log("Stopping nodes")
         stop_nodes()
     except Exception as e:
-        vlog("Caught exception:\n\t" + str(e))
-        vlog("Cleaning up orphaned '%s' processes" % options.shuffle_bin)
+        log("Caught exception:\n\t" + str(e))
+        log("Cleaning up orphaned '%s' processes" % options.shuffle_bin)
         do_ssh(["pkill", options.shuffle_bin], nodes)
 
 # Parse the log files to extract useful data

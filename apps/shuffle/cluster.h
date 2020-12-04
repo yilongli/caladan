@@ -52,6 +52,8 @@ struct Cluster {
     /// IP addresses of all the nodes in the cluster, ordered by rank.
     std::vector<uint32_t> server_list;
 
+    // FIXME: the use of unique_ptr's is not very cache-friendly? should we try to optimize it?
+
     /// TCP connections to all the nodes in the cluster (except itself).
     std::vector<std::unique_ptr<rt::TcpConn>> tcp_socks;
 

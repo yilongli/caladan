@@ -86,7 +86,7 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
             log_file = file;
             i++;
         } else {
-            panic("Unknown option '%s'\n", option);
+            panic("Unknown option '%s'", option);
         }
     }
 
@@ -100,7 +100,7 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
 }
 
 /**
- * Parse the arguments for the "setup_workload" command.
+ * Parse the arguments for the "gen_workload" command.
  *
  * \param words
  *      Each entry represents one word of the command, like argc/argv.
@@ -108,9 +108,9 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
  *      True means success, false means there was an error.
  */
 bool
-SetupWorkloadOptions::parse_args(std::vector<std::string> words)
+GenWorkloadOptions::parse_args(std::vector<std::string> words)
 {
-    assert(words[0] == "setup_workload");
+    assert(words[0] == "gen_workload");
     for (size_t i = 1; i < words.size(); i++) {
         const char *option = words[i].c_str();
         if (strcmp(option, "--seed") == 0) {
@@ -148,7 +148,7 @@ SetupWorkloadOptions::parse_args(std::vector<std::string> words)
         } else if (strcmp(option, "--skew-output") == 0) {
             skew_output = true;
         } else {
-            log_err("Unknown option '%s'\n", option);
+            log_err("Unknown option '%s'", option);
             return false;
         }
     }
@@ -175,7 +175,7 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
             } else if (words[i+1] == "udp") {
                 tcp_protocol = false;
             } else {
-                log_err("Unknown protocol '%s'\n", words[i+1].c_str());
+                log_err("Unknown protocol '%s'", words[i+1].c_str());
                 return false;
             }
             i++;
@@ -190,7 +190,7 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
             } else if (words[i+1] == "LRPT") {
                 policy = ShufflePolicy::LRPT;
             } else {
-                log_err("Unknown policy '%s'\n", words[i+1].c_str());
+                log_err("Unknown policy '%s'", words[i+1].c_str());
                 return false;
             }
             i++;
@@ -214,7 +214,7 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
             }
             i++;
         } else {
-            log_err("Unknown option '%s'\n", option);
+            log_err("Unknown option '%s'", option);
             return false;
         }
     }
@@ -231,6 +231,8 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
  */
 bool
 TimeSyncOptions::parse_args(std::vector<std::string> words)
-{}
+{
+    return true;
+}
 
 

@@ -19,7 +19,9 @@ extern "C" {
 #include "shuffle_tcp.h"
 #include "workload.h"
 
-// FIXME: avoid static initializer, so only use ptr type for static var???
+// Note: we don't want any static initializer because they are run before
+// starting the caladan runtime; as a result, all the static variables are
+// of pointer type.
 
 /// Command-line options.
 static CommandLineOptions* cmd_line_opts;
@@ -135,6 +137,7 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         if (!success) {
             return false;
         }
+        log_info("node-%d completed shuffle op %lu", cluster->local_rank, run);
 
         // The master node blocks until all followers complete.
         if (!is_master) {
@@ -210,8 +213,8 @@ exec_words(std::vector<std::string>& words)
 		return true;
 	if (words[0] == "tcp") {
         return tcp_cmd(words, *cluster);
-    } else if (words[0] == "setup_workload") {
-		return setup_workload_cmd(words, *cluster, *current_op);
+    } else if (words[0] == "gen_workload") {
+		return gen_workload_cmd(words, *cluster, *current_op);
 	} else if (words[0] == "time_sync") {
         return time_sync_cmd(words);
 	} else if (words[0] == "run_bench") {
@@ -259,8 +262,12 @@ exec_string(const char* cmd)
 
 void
 real_main(void* arg) {
+    // Initialize static variables.
     Cluster cls;
+    shuffle_op op;
     cluster = &cls;
+    current_op = &op;
+
     cluster->init(cmd_line_opts);
 
     // Read commands from stdin and execute them.

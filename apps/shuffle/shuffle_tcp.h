@@ -12,6 +12,7 @@
  * Message header used in TCP-based shuffle implementation.
  */
 struct tcp_shuffle_msg_hdr {
+    // FIXME: may a non-zero value can actually mean the seg# it's ack'ing.
     /// Non-zero means this is merely an ACK of the outbound message;
     /// zero means a message segment containing the actual data will follow
     /// this header immediately.

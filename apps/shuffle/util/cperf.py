@@ -64,6 +64,7 @@ default_defaults = {
     'shuffle_bin':         'shuffle_node',
     'caladan_cfg':         '~/caladan.config',
     'ifname':              'eno1d1',
+    'num_nodes':           1,
     'master_addr':         '10.10.1.2:5000',
     'log_dir':             'logs/' + time.strftime('%Y%m%d%H%M%S'),
     'log_file':            'node.log',
@@ -96,7 +97,7 @@ def vlog(message):
     cperf_log.write("\n")
 
 
-def get_parser(description, usage, defaults = {}):
+def get_parser(description, usage, defaults = None):
     """
     Returns an ArgumentParser for options that are commonly used in
     performance tests.
@@ -107,6 +108,8 @@ def get_parser(description, usage, defaults = {}):
                     are defaults; used to modify the defaults for some of the
                     options (there is a default default for each option).
     """
+    if defaults is None:
+        defaults = {}
     for key in default_defaults:
         if not key in defaults:
             defaults[key] = default_defaults[key]
@@ -135,6 +138,7 @@ def get_parser(description, usage, defaults = {}):
             help='Symbolic name of the network interface to use (default: %s)'
             % (defaults['ifname']))
     parser.add_argument('--num-nodes', type=int, dest='num_nodes',
+            default=defaults['num_nodes'],
             help='Number of nodes used in the experiment')
     parser.add_argument('--master-addr', dest='master_addr',
             default=defaults['master_addr'],
@@ -169,7 +173,8 @@ def init(options):
             shutil.rmtree(log_dir)
         os.makedirs(log_dir)
         latest = log_dir + "/../latest"
-        os.unlink(latest)
+        if os.path.exists(latest):
+            os.unlink(latest)
         os.symlink(os.path.abspath(log_dir), latest, target_is_directory=True)
 
     cperf_log = open("%s/cperf.log" % (log_dir), "a")
@@ -265,7 +270,7 @@ def start_nodes(r, shell_cmd):
     for id in r:
         if id in active_nodes:
             continue
-        vlog("Starting shuffle_node on rc%02d" % (id))
+        vlog("Starting shuffle_node on rc%02d" % id)
         node = subprocess.Popen(["ssh", "-o", "StrictHostKeyChecking=no",
                 node_ssh_addrs[id], shell_cmd], encoding="utf-8",
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,

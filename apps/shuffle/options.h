@@ -83,9 +83,9 @@ struct CommandLineOptions {
 };
 
 /**
- * Options for command "setup_workload".
+ * Options for command "gen_workload".
  */
-struct SetupWorkloadOptions {
+struct GenWorkloadOptions {
 
     /// Seed value for a random number generator; this is used to generate
     /// deterministic workloads.
@@ -107,7 +107,7 @@ struct SetupWorkloadOptions {
     /// True means the output partitions will be skewed; false, otherwise.
     bool skew_output;
 
-    explicit SetupWorkloadOptions()
+    explicit GenWorkloadOptions()
         : rand_seed(5689u)
         , avg_message_size()
         , msg_skew_factor(1.0)

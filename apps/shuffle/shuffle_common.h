@@ -2,6 +2,8 @@
 
 #include <atomic>
 #include <cstddef>
+#include <memory>
+#include <vector>
 
 #include "sync.h"
 

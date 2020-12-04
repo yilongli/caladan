@@ -6,6 +6,7 @@ extern "C" {
 }
 
 #include <algorithm>
+#include <memory>
 #include "thread.h"
 
 void
@@ -104,7 +105,10 @@ Cluster::connect_all(uint16_t port)
     tcp_server_port = port;
     tcp_socks.clear();
     tcp_socks.resize(num_nodes);
-    tcp_write_mutexes.resize(num_nodes);
+    tcp_write_mutexes.clear();
+    for (int i = 0; i < num_nodes; i++) {
+        tcp_write_mutexes.emplace_back(std::make_unique<rt::Mutex>());
+    }
 
     // Compute the number of inbound and outbound connections.
     int num_out_conns = num_nodes / 2;
@@ -221,6 +225,7 @@ tcp_cmd(std::vector<std::string>& words, Cluster& cluster)
                 return false;
             }
             cluster.connect_all(port);
+            i++;
         } else if (words[i] == "verify") {
             verify_tcp(cluster);
         } else if (words[i] == "disconnect") {

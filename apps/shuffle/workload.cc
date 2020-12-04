@@ -1,3 +1,7 @@
+extern "C" {
+#include <base/log.h>
+}
+
 #include "workload.h"
 #include "cluster.h"
 
@@ -266,10 +270,10 @@ gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
 }
 
 bool
-setup_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
+gen_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
         shuffle_op &op)
 {
-    SetupWorkloadOptions opts;
+    GenWorkloadOptions opts;
     if (!opts.parse_args(words)) {
         return false;
     }
@@ -296,6 +300,9 @@ setup_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
     op.rx_data.reset(new char[total_rx_bytes]);
     op.next_inmsg_addr.store(op.rx_data.get());
 
+    // For debugging.
+    memset(op.tx_data.get(), 'a' + cluster.local_rank, op.total_tx_bytes);
+
     // Set up the outbound messages and initialize the inbound messages.
     op.out_msgs.clear();
     char* start = op.tx_data.get();
@@ -307,11 +314,23 @@ setup_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
     op.in_msgs.clear();
     op.in_msgs.resize(cluster.num_nodes);
 
-//    printf("total tx bytes: %lu\n", op.total_tx_bytes);
-//    printf("total rx bytes: %lu\n", op.total_rx_bytes);
-//    for (int i = 0; i < cluster.num_nodes; i++) {
-//        printf("len[%2d] = %lu\n", i, op.out_msgs[i].len);
-//    }
+    log_info("total TX bytes: %lu", op.total_tx_bytes);
+    log_info("total RX bytes: %lu", op.total_rx_bytes);
+    std::string msg0("             Rank:");
+    std::string msg1("Outbound messages:");
+    std::string msg2(" Inbound messages:");
+    char buf[16] = {};
+    for (int i = 0; i < cluster.num_nodes; i++) {
+        sprintf(buf, "%6d", i);
+        msg0.append(buf);
+        sprintf(buf, "%6.0f", opts.avg_message_size * msg_sizes[local_rank][i]);
+        msg1.append(buf);
+        sprintf(buf, "%6.0f", opts.avg_message_size * msg_sizes[i][local_rank]);
+        msg2.append(buf);
+    }
+    log_info("%s", msg0.c_str());
+    log_info("%s", msg1.c_str());
+    log_info("%s", msg2.c_str());
 
     return true;
 }
