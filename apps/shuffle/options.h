@@ -101,6 +101,10 @@ struct GenWorkloadOptions {
     /// This option controls the skewness of the input/output partitions.
     double part_skew_factor;
 
+    /// True means the message sizes will be skewed; false, otherwise.
+    /// This option is set to true when option "--msg-skew-factor" is present.
+    bool skew_msg;
+
     /// True means the input partitions will be skewed; false, otherwise.
     bool skew_input;
 
@@ -112,6 +116,7 @@ struct GenWorkloadOptions {
         , avg_message_size()
         , msg_skew_factor(1.0)
         , part_skew_factor(1.0)
+        , skew_msg(false)
         , skew_input(false)
         , skew_output(false)
     {}
@@ -122,7 +127,8 @@ struct GenWorkloadOptions {
 enum ShufflePolicy {
     HADOOP = 0,
     LOCKSTEP = 1,
-    LRPT = 2
+    SRPT = 2,
+    LRPT = 3,
 };
 
 struct RunBenchOptions {

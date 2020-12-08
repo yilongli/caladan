@@ -37,8 +37,10 @@ if not options.plot_only:
         start_nodes(nodes, command)
         do_cmd("tcp connect 5000", nodes)
         do_cmd("log hello!", nodes)
-        do_cmd("gen_workload --seed 100 --avg-msg-size 1000 --msg-skew-factor 2.0", nodes)
-        do_cmd("run_bench --protocol tcp --policy hadoop --times 10", nodes)
+        do_cmd("gen_workload --seed 100 --avg-msg-size 100000", nodes)
+        # do_cmd("gen_workload --seed 100 --avg-msg-size 10000 "
+        #        "--msg-skew-factor 2.0", nodes)
+        do_cmd("run_bench --protocol tcp --policy hadoop --max-unacked 5 --max-seg 1400 --times 10", nodes)
         log("Stopping nodes")
         stop_nodes()
     except Exception as e:

@@ -135,6 +135,7 @@ GenWorkloadOptions::parse_args(std::vector<std::string> words)
                 log_err("failed to parse '%s %s'", option, words[i+1].c_str());
                 return false;
             }
+            skew_msg = true;
             i++;
         } else if (strcmp(option, "--part-skew-factor") == 0) {
             if (!parse(words[i+1].c_str(), &part_skew_factor, option, "double"))
@@ -189,6 +190,8 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
                 policy = ShufflePolicy::LOCKSTEP;
             } else if (words[i+1] == "LRPT") {
                 policy = ShufflePolicy::LRPT;
+            } else if (words[i+1] == "SRPT") {
+                policy = ShufflePolicy::SRPT;
             } else {
                 log_err("Unknown policy '%s'", words[i+1].c_str());
                 return false;

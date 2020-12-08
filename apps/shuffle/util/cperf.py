@@ -281,7 +281,6 @@ def start_nodes(r, shell_cmd):
         fcntl.fcntl(node.stdout, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         active_nodes[id] = node
         started.append(id)
-    # FIXME: what is this? am I supposed to print something in shuffle_node.cc?
     wait_output("% ", started, "ssh")
     # FIXME: shall I implement "log" command in shuffle_node? maybe w/o --level option?
     # log_level = "normal"

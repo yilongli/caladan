@@ -189,6 +189,8 @@ private:
  *      the skewness of the message sizes indirectly.
  * \param part_skew_factor
  *      Ratio between the largest partition and the smallest partition.
+ * \param skew_msg
+ *      True means the message sizes will be skewed; false, otherwise.
  * \param skew_input
  *      True means the input partitions will be skewed; false, otherwise.
  * \param skew_output
@@ -201,13 +203,21 @@ private:
  */
 std::vector<std::vector<double>>
 gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
-        double part_skew_factor, bool skew_input, bool skew_output) {
+        double part_skew_factor, bool skew_msg, bool skew_input,
+        bool skew_output) {
     std::mt19937 gen(rand_seed);
     zipf_distribution<> zipf(30000, msg_skew_factor);
 
     std::vector<std::vector<double>> msg_sizes;
     std::vector<std::vector<int>> nodes;
     std::vector<std::tuple<int, int, int>> ext_keys;
+
+    if (!skew_msg) {
+        for (int node_id = 0; node_id < num_nodes; node_id++) {
+            msg_sizes.emplace_back(num_nodes, 1.0);
+        }
+        return msg_sizes;
+    }
 
     // Compute how far a splitter of the input or output partitions is allowed
     // to move. If the partition skew factor is r (i.e., the largest partition
@@ -279,8 +289,8 @@ gen_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
     }
 
     auto msg_sizes = gen_msg_sizes(opts.rand_seed, cluster.num_nodes,
-            opts.msg_skew_factor, opts.part_skew_factor, opts.skew_input,
-            opts.skew_output);
+            opts.msg_skew_factor, opts.part_skew_factor, opts.skew_msg,
+            opts.skew_input, opts.skew_output);
 
     // Compute the total number of bytes that will be sent and received in the
     // experiment (so we know how much memory to allocate later).

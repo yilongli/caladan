@@ -123,6 +123,7 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         op.acked_out_msgs.reset(nullptr);
 
         // The master node broadcasts while the followers block.
+        uint64_t bcast_tsc = rdtsc();
         if (!is_master) {
             cluster->control_socks[0]->ReadFull(ctrl_msg, 2);
             assert(strncmp(ctrl_msg, "GO", 2) == 0);
@@ -133,20 +134,33 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         }
 
         // FIXME: the following piece of code seems awkward
+        uint64_t elapsed_tsc = rdtsc();
         bool success = tcp_shuffle(opts, *cluster, op);
         if (!success) {
             return false;
         }
-        log_info("node-%d completed shuffle op %lu", cluster->local_rank, run);
+        elapsed_tsc = rdtsc() - elapsed_tsc;
+        double elapsed_us = elapsed_tsc * 1.0 / cycles_per_us;
+
+        double rx_speed = op.total_rx_bytes / (125.0 * elapsed_us);
+        double tx_speed = op.total_tx_bytes / (125.0 * elapsed_us);
 
         // The master node blocks until all followers complete.
         if (!is_master) {
             cluster->control_socks[0]->WriteFull("DONE", 4);
+            log_info("node-%d completed shuffle op %lu in %.1f us "
+                     "(%.2f/%.2f Gbps)", cluster->local_rank, run, elapsed_us,
+                    rx_speed, tx_speed);
         } else {
             for (auto& c : cluster->control_socks) {
                 c->ReadFull(ctrl_msg, 4);
                 assert(strncmp(ctrl_msg, "DONE", 4) == 0);
             }
+            uint64_t bench_overhead = rdtsc() - bcast_tsc - elapsed_tsc;
+            log_info("node-%d completed shuffle op %lu in %.1f us "
+                     "(%.2f/%.2f Gbps), benchmark overhead %.1f us",
+                     cluster->local_rank, run, elapsed_us, rx_speed, tx_speed,
+                    bench_overhead * 1.0 / cycles_per_us);
         }
     }
     return true;
