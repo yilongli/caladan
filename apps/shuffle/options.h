@@ -141,6 +141,10 @@ struct RunBenchOptions {
     /// lightweight user-threads will simply issue blocking IO operations.
     bool use_epoll;
 
+    /// When UDP protocol is selected, this is the port number to send and
+    /// receive datagrams.
+    uint16_t udp_port;
+
     /// Policy used to schedule shuffle (e.g., which message to transmit next
     /// and how many bytes to transmit).
     ShufflePolicy policy;
@@ -160,10 +164,11 @@ struct RunBenchOptions {
     explicit RunBenchOptions()
         : tcp_protocol(true)
         , use_epoll(false)
+        , udp_port()
         , policy(ShufflePolicy::HADOOP)
         , max_unacked_msgs(1)
         , max_seg(1400)
-        , times(0)
+        , times(1)
     {}
 
     bool parse_args(std::vector<std::string> words);

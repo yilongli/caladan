@@ -61,6 +61,11 @@ class UdpConn : public NetConn {
     return udp_write_to(c_, buf, len, raddr);
   }
 
+  // Writes a vector into a datagram to remote address.
+  ssize_t WritevTo(const struct iovec *iov, int iovcnt, const netaddr *raddr) {
+    return udp_writev_to(c_, iov, iovcnt, raddr);
+  }
+
   // Reads a datagram.
   ssize_t Read(void *buf, size_t len) {
     return udp_read(c_, buf, len);

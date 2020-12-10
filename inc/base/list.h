@@ -557,9 +557,9 @@ static inline void list_prepend_list(struct list_head *to,
  *		printf("Name: %s\n", child->name);
  */
 #define list_for_each_off(h, i, off)                                    \
-  for (i = list_node_to_off_(list_debug(h)->n.next, (off));             \
+  for (i = (typeof(i))list_node_to_off_(list_debug(h)->n.next, (off));             \
        list_node_from_off_((void *)i, (off)) != &(h)->n;                \
-       i = list_node_to_off_(list_node_from_off_((void *)i, (off))->next, \
+       i = (typeof(i))list_node_to_off_(list_node_from_off_((void *)i, (off))->next, \
                              (off)))
 
 /**

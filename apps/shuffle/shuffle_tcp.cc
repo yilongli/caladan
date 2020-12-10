@@ -74,8 +74,8 @@ void tcp_rx_msg(Cluster& c, shuffle_op& op, int peer)
             if (rx_bytes == msg_size) {
                 // Inbound message is complete.
                 rx_complete = true;
-                op.in_msgs[peer].addr = buf;
-                op.in_msgs[peer].len = msg_size;
+                op.in_bufs[peer].addr = buf;
+                op.in_bufs[peer].len = msg_size;
 
                 // Acknowledge the inbound message.
                 tt_record("node-%d: sending ACK to node-%d", c.local_rank,
@@ -153,7 +153,7 @@ void tcp_tx_msg(Cluster &c, shuffle_op &op, int peer, size_t max_seg_size)
 {
     auto& conn = c.tcp_socks[peer];
     auto& mutex = c.tcp_write_mutexes[peer];
-    auto& out_msg = op.out_msgs[peer];
+    auto& out_msg = op.out_bufs[peer];
     tcp_shuffle_msg_hdr msg_hdr = {
         .is_ack = 0,
         .seg_size = 0,
@@ -202,7 +202,7 @@ void tcp_tx_main(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
         // Sort the outbound messages in descending order of length (messages
         // are selected from the end of the vector later).
         auto compare = [&op] (int r0, int r1) {
-            return op.out_msgs[r0].len > op.out_msgs[r1].len;
+            return op.out_bufs[r0].len > op.out_bufs[r1].len;
         };
         std::sort(peers.begin(), peers.end(), compare);
     }
@@ -249,9 +249,9 @@ tcp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
 
     // Copy the message destined to itself directly.
     int self = c.local_rank;
-    op.in_msgs[self].addr = op.next_inmsg_addr.fetch_add(op.out_msgs[self].len);
-    op.in_msgs[self].len = op.out_msgs[self].len;
-    memcpy(op.in_msgs[self].addr, op.out_msgs[self].addr, op.in_msgs[self].len);
+    op.in_bufs[self].addr = op.next_inmsg_addr.fetch_add(op.out_bufs[self].len);
+    op.in_bufs[self].len = op.out_bufs[self].len;
+    memcpy(op.in_bufs[self].addr, op.out_bufs[self].addr, op.in_bufs[self].len);
     
     // Spin up a thread to handle the receive-side logic of shuffle; the rest of
     // this method will handle the send-side logic.

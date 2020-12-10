@@ -11,12 +11,15 @@ extern "C" {
 #include <unistd.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <atomic>
+#include <signal.h>
 
 #include "thread.h"
 
 #include "cluster.h"
 #include "shuffle_tcp.h"
+#include "shuffle_udp.h"
 #include "workload.h"
 
 // Note: we don't want any static initializer because they are run before
@@ -58,6 +61,10 @@ void print_help(const char* exec_cmd) {
            "                   other nodes in the cluster.\n"
            "  disconnect       Tear down all TCP connections.\n"
            "\n"
+           "udp                Manage UDP sockets within the cluster:\n"
+           "  open [port]      Open a UDP socket using a specific port."
+           "  close [port]     Close a previously opened UDP socket.\n"
+           "\n"
            "gen_workload       Generate a shuffle workload as determined by\n"
            "                   the options.\n"
            "  --seed           Seed value used to generate the message sizes.\n"
@@ -72,7 +79,9 @@ void print_help(const char* exec_cmd) {
            "  --protocol       Transport protocol to use: homa or tcp\n"
            "  --epoll          Use epoll for efficient monitoring of incoming\n"
            "                   data at TCP sockets.\n"
-           "  --policy         hadoop, lockstep, or LRPT\n"
+           "  --udp-port       UDP port number used to send and receive data-\n"
+           "                   grams\n"
+           "  --policy         hadoop, lockstep, SRPT, or LRPT\n"
            "  --max-unacked    Maximum number of outbound messages which can\n"
            "                   be in progress at any time.\n"
            "  --max-seg        Maximum number of bytes in a message segment.\n"
@@ -109,16 +118,12 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         return false;
     }
 
-    // FIXME: udp shuffle not implemented.
-    if (!opts.tcp_protocol)
-        return false;
-
     char ctrl_msg[32] = {};
     bool is_master = (cluster->local_rank == 0);
     for (size_t run = 0; run < opts.times; run++) {
         // Reset the shuffle_op object.
-        op.in_msgs.clear();
-        op.in_msgs.resize(cluster->num_nodes);
+        op.in_bufs.clear();
+        op.in_bufs.resize(cluster->num_nodes);
         op.next_inmsg_addr = op.rx_data.get();
         op.acked_out_msgs.reset(nullptr);
 
@@ -135,7 +140,8 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
 
         // FIXME: the following piece of code seems awkward
         uint64_t elapsed_tsc = rdtsc();
-        bool success = tcp_shuffle(opts, *cluster, op);
+        bool success = (opts.tcp_protocol) ? tcp_shuffle(opts, *cluster, op)
+                                           : udp_shuffle(opts, *cluster, op);
         if (!success) {
             return false;
         }
@@ -223,26 +229,28 @@ log_cmd(std::vector<std::string>& words)
 bool
 exec_words(std::vector<std::string>& words)
 {
-	if (words.empty())
-		return true;
-	if (words[0] == "tcp") {
+    if (words.empty())
+        return true;
+    if (words[0] == "tcp") {
         return tcp_cmd(words, *cluster);
+    } else if (words[0] == "udp") {
+        return udp_cmd(words, *cluster);
     } else if (words[0] == "gen_workload") {
-		return gen_workload_cmd(words, *cluster, *current_op);
-	} else if (words[0] == "time_sync") {
+        return gen_workload_cmd(words, *cluster, *current_op);
+    } else if (words[0] == "time_sync") {
         return time_sync_cmd(words);
-	} else if (words[0] == "run_bench") {
-		return run_bench_cmd(words, *current_op);
-	} else if (words[0] == "exit") {
-		if (cmd_line_opts->log_file != stdout)
-			log_info("shuffle_node exiting (exit command)");
-		exit(0);
-	} else if (words[0] == "log") {
+    } else if (words[0] == "run_bench") {
+        return run_bench_cmd(words, *current_op);
+    } else if (words[0] == "exit") {
+        if (cmd_line_opts->log_file != stdout)
+            log_info("shuffle_node exiting (exit command)");
+        exit(0);
+    } else if (words[0] == "log") {
         return log_cmd(words);
-	} else {
-		printf("Unknown command '%s'", words[0].c_str());
-		return false;
-	}
+    } else {
+        printf("Unknown command '%s'", words[0].c_str());
+        return false;
+    }
 }
 
 /**
@@ -256,21 +264,21 @@ exec_words(std::vector<std::string>& words)
 bool
 exec_string(const char* cmd)
 {
-	const char *p = cmd;
-	std::vector<std::string> words;
+    const char *p = cmd;
+    std::vector<std::string> words;
 
-	if (cmd_line_opts->log_file != stdout)
-		log_info("Command: %s", cmd);
+    if (cmd_line_opts->log_file != stdout)
+        log_info("Command: %s", cmd);
 
-	while (true) {
-		int word_length = strcspn(p, " \t\n");
-		if (word_length > 0)
-			words.emplace_back(p, word_length);
-		p += word_length;
-		if (*p == 0)
-			break;
-		p++;
-	}
+    while (true) {
+        int word_length = strcspn(p, " \t\n");
+        if (word_length > 0)
+            words.emplace_back(p, word_length);
+        p += word_length;
+        if (*p == 0)
+            break;
+        p++;
+    }
     return exec_words(words);
 }
 
@@ -284,8 +292,9 @@ real_main(void* arg) {
 
     cluster->init(cmd_line_opts);
 
-    // Read commands from stdin and execute them.
-    std::string line;
+    // Read commands from stdin and execute them (note: commands may appear in
+    // the same line separated by semicolons).
+    std::string line, cmd;
     while (true) {
         printf("%% ");
         fflush(stdout);
@@ -295,19 +304,32 @@ real_main(void* arg) {
             return;
         }
 
-        bool success = exec_string(line.c_str());
-        if (!success)
-            log_err("failed to execute command '%s'", line.c_str());
+        std::stringstream ss(line);
+        while (getline(ss, cmd, ';')) {
+            bool success = exec_string(cmd.c_str());
+            if (!success)
+                log_err("failed to execute command '%s'", cmd.c_str());
+        }
     }
 }
 
-int main(int argc, char* argv[]) {
-	if (((argc >= 2) && (strcmp(argv[1], "--help") == 0)) || (argc == 1)) {
-		print_help(argv[0]);
-		return 0;
-	}
+/**
+ * Flush the log messages and exit the application when Ctrl+C is pressed.
+ */
+void
+sig_handler(int signum)
+{
+    panic("%s received, exiting...", strsignal(signum));
+}
 
-	CommandLineOptions opts;
+int main(int argc, char* argv[]) {
+    signal(SIGINT, sig_handler);
+    if (((argc >= 2) && (strcmp(argv[1], "--help") == 0)) || (argc == 1)) {
+        print_help(argv[0]);
+        return 0;
+    }
+
+    CommandLineOptions opts;
     cmd_line_opts = &opts;
     opts.parse_args(argc-2, &argv[2]);
     log_init(opts.log_file);

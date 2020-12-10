@@ -314,15 +314,15 @@ gen_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
     memset(op.tx_data.get(), 'a' + cluster.local_rank, op.total_tx_bytes);
 
     // Set up the outbound messages and initialize the inbound messages.
-    op.out_msgs.clear();
+    op.out_bufs.clear();
     char* start = op.tx_data.get();
     for (int i = 0; i < cluster.num_nodes; i++) {
         size_t len = msg_sizes[local_rank][i] * opts.avg_message_size;
-        op.out_msgs.emplace_back(start, len);
+        op.out_bufs.emplace_back(start, len);
         start += len;
     }
-    op.in_msgs.clear();
-    op.in_msgs.resize(cluster.num_nodes);
+    op.in_bufs.clear();
+    op.in_bufs.resize(cluster.num_nodes);
 
     log_info("total TX bytes: %lu", op.total_tx_bytes);
     log_info("total RX bytes: %lu", op.total_rx_bytes);

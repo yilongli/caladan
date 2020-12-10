@@ -180,6 +180,14 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
                 return false;
             }
             i++;
+        } else if (strcmp(option, "--udp-port") == 0) {
+            size_t port;
+            if (!parse(words[i + 1].c_str(), &port, option, "unsigned")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            udp_port = port;
+            i++;
         } else if (strcmp(option, "--epoll") == 0) {
             use_epoll = true;
             i++;

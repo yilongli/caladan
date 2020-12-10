@@ -30,6 +30,8 @@ extern ssize_t udp_read_from(udpconn_t *c, void *buf, size_t len,
 			     struct netaddr *raddr);
 extern ssize_t udp_write_to(udpconn_t *c, const void *buf, size_t len,
 			    const struct netaddr *raddr);
+extern ssize_t udp_writev_to(udpconn_t *c, const struct iovec *iov, int iovcnt,
+			    const struct netaddr *raddr);
 extern ssize_t udp_read(udpconn_t *c, void *buf, size_t len);
 extern ssize_t udp_write(udpconn_t *c, const void *buf, size_t len);
 extern void udp_shutdown(udpconn_t *c);

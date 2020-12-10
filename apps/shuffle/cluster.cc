@@ -99,7 +99,7 @@ Cluster::init(CommandLineOptions* options)
  * same as the server connections.
  */
 void
-Cluster::connect_all(uint16_t port)
+Cluster::tcp_connect_all(uint16_t port)
 {
     // Tear down all previous connections.
     tcp_server_port = port;
@@ -167,11 +167,36 @@ Cluster::connect_all(uint16_t port)
 }
 
 void
-Cluster::disconnect()
+Cluster::tcp_disconnect()
 {
     tcp_server_port = 0;
     tcp_socks.clear();
     tcp_socks.resize(num_nodes);
+}
+
+void
+Cluster::udp_open(uint16_t port)
+{
+    rt::UdpConn* sock = rt::UdpConn::Listen({0, port});
+    if (sock == nullptr) {
+        log_info("node-%d: failed to open UDP socket at port %u", local_rank,
+                port);
+    } else {
+        udp_socks.emplace(port, sock);
+        log_info("node-%d: opened UDP socket at port %u", local_rank, port);
+    }
+}
+
+void
+Cluster::udp_close(uint16_t port)
+{
+    size_t ret = udp_socks.erase(port);
+    if (ret == 0) {
+        log_err("node-%d: unable to find UDP socket at port %u", local_rank,
+                port);
+    } else {
+        log_info("node-%d: closed UDP socket at port %u", local_rank, port);
+    }
 }
 
 /**
@@ -207,7 +232,7 @@ verify_tcp(Cluster& cluster)
 }
 
 /**
- * Parse the arguments of a "verify_tcp" command and execute it.
+ * Parse the arguments of a "tcp" command and execute it.
  *
  * \return
  *      True means success, false means there was an error.
@@ -224,12 +249,48 @@ tcp_cmd(std::vector<std::string>& words, Cluster& cluster)
                 log_err("failed to parse '%s %s'", option, words[i+1].c_str());
                 return false;
             }
-            cluster.connect_all(port);
+            cluster.tcp_connect_all(port);
             i++;
         } else if (words[i] == "verify") {
             verify_tcp(cluster);
         } else if (words[i] == "disconnect") {
-            cluster.disconnect();
+            cluster.tcp_disconnect();
+        } else {
+            log_err("Unknown option '%s'\n", words[i].c_str());
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Parse the arguments of a "udp" command and execute it.
+ *
+ * \return
+ *      True means success, false means there was an error.
+ */
+bool
+udp_cmd(std::vector<std::string>& words, Cluster& cluster)
+{
+    assert(words[0] == "udp");
+    for (size_t i = 1; i < words.size(); i++) {
+        const char *option = words[i].c_str();
+        if (words[i] == "open") {
+            int port;
+            if (!parse(words[i+1].c_str(), &port, option, "integer")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            cluster.udp_open(port);
+            i++;
+        } else if (words[i] == "close") {
+            int port;
+            if (!parse(words[i+1].c_str(), &port, option, "integer")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            cluster.udp_close(port);
+            i++;
         } else {
             log_err("Unknown option '%s'\n", words[i].c_str());
             return false;

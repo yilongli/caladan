@@ -22,7 +22,10 @@ struct shfl_msg_buf {
         , len(len)
     {}
 
+    /// Starting address of the buffer.
     char* addr;
+
+    /// Length of the message buffer.
     size_t len;
 };
 
@@ -33,8 +36,8 @@ struct shuffle_op {
 
     explicit shuffle_op()
         : num_nodes(-1)
-        , out_msgs()
-        , in_msgs()
+        , out_bufs()
+        , in_bufs()
         , total_tx_bytes()
         , total_rx_bytes()
         , tx_data()
@@ -43,11 +46,16 @@ struct shuffle_op {
         , acked_out_msgs()
     {}
 
+    /// Number of nodes in the cluster.
     int num_nodes;
 
-    std::vector<shfl_msg_buf> out_msgs;
+    /// Memory buffers used to store the content of the outbound messages,
+    /// ordered by the rank of the receiver.
+    std::vector<shfl_msg_buf> out_bufs;
 
-    std::vector<shfl_msg_buf> in_msgs;
+    /// Memory buffers used to store the content of the inbound messages,
+    /// ordered by the rank of the sender.
+    std::vector<shfl_msg_buf> in_bufs;
 
     /// Total number of bytes in @tx_data.
     size_t total_tx_bytes;

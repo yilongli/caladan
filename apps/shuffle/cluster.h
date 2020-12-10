@@ -3,6 +3,7 @@
 #include "options.h"
 
 #include <memory>
+#include <unordered_map>
 
 #include "net.h"
 #include "sync.h"
@@ -22,11 +23,14 @@ struct Cluster {
         , server_list()
         , tcp_socks()
         , tcp_write_mutexes()
+        , udp_socks()
     {}
 
     void init(CommandLineOptions* options);
-    void connect_all(uint16_t port);
-    void disconnect();
+    void tcp_connect_all(uint16_t port);
+    void tcp_disconnect();
+    void udp_open(uint16_t port);
+    void udp_close(uint16_t port);
 
     /// Number of nodes in the experiment.
     int num_nodes;
@@ -60,6 +64,11 @@ struct Cluster {
     /// Mutexes used to synchronize writes to TCP streams (otherwise, we can't
     /// tell ACKs from normal data).
     std::vector<std::unique_ptr<rt::Mutex>> tcp_write_mutexes;
+
+    /// A hash table whose keys are port numbers and whose values are UDP
+    /// sockets.
+    std::unordered_map<uint16_t, std::unique_ptr<rt::UdpConn>> udp_socks;
 };
 
 bool tcp_cmd(std::vector<std::string>& words, Cluster& cluster);
+bool udp_cmd(std::vector<std::string>& words, Cluster& cluster);

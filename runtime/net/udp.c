@@ -366,10 +366,36 @@ static void udp_tx_release_mbuf(struct mbuf *m)
 ssize_t udp_write_to(udpconn_t *c, const void *buf, size_t len,
                      const struct netaddr *raddr)
 {
+    struct iovec iov = {.iov_base = (void *)buf, .iov_len = len};
+    return udp_writev_to(c, &iov, 1, raddr);
+}
+
+/**
+ * udp_writev_to - writes vectored data to a UDP socket
+ * @c: the UDP socket
+ * @iov: a pointer to the IO vector
+ * @iovcnt: the number of vectors in @iov
+ * @raddr: the remote address of the datagram (if not NULL)
+ *
+ * WARNING: This a blocking function. It will wait until space in the transmit
+ * buffer is available or the socket is shutdown.
+ *
+ * Returns the number of payload bytes sent in the datagram. If an error
+ * occurs, returns < 0 to indicate the error code.
+ */
+ssize_t udp_writev_to(udpconn_t *c, const struct iovec *iov, const int iovcnt,
+                      const struct netaddr *raddr)
+{
 	struct netaddr addr;
 	ssize_t ret;
 	struct mbuf *m;
-	void *payload;
+	char *payload;
+	int i;
+
+    size_t len = 0;
+	for (i = 0; i < iovcnt; i++) {
+	    len += iov[i].iov_len;
+    }
 
 	if (len > UDP_MAX_PAYLOAD)
 		return -EMSGSIZE;
@@ -401,8 +427,11 @@ ssize_t udp_write_to(udpconn_t *c, const void *buf, size_t len,
 		return -ENOBUFS;
 
 	/* write datagram payload */
-	payload = mbuf_put(m, len);
-	memcpy(payload, buf, len);
+	payload = (char *)mbuf_put(m, len);
+    for (i = 0; i < iovcnt; i++) {
+        memcpy(payload, iov[i].iov_base, iov[i].iov_len);
+        payload += iov[i].iov_len;
+    }
 
 	/* override mbuf release method */
 	m->release = udp_tx_release_mbuf;

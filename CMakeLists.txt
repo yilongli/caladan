@@ -46,6 +46,7 @@ add_executable(caladan
         apps/shuffle/cluster.cc
         apps/shuffle/shuffle_node.cc
         apps/shuffle/shuffle_tcp.cc
+        apps/shuffle/shuffle_udp.cc
         apps/shuffle/options.cc
         apps/shuffle/workload.cc
         apps/spdk_perf/perf.c
