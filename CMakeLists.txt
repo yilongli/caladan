@@ -75,6 +75,7 @@ add_executable(caladan
         base/tcache.c
         base/thread.c
         base/time.c
+        base/timetrace.c
         bindings/cc/macros.h
         bindings/cc/net.h
         bindings/cc/runtime.cc

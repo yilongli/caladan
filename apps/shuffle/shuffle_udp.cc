@@ -3,6 +3,7 @@
 extern "C" {
 #include <base/log.h>
 #include <net/ip.h>
+#include <runtime/timetrace.h>
 }
 
 #include <memory>
@@ -20,7 +21,8 @@ namespace {
             uint64_t arg0 = 0, uint64_t arg1 = 0, uint64_t arg2 = 0,
             uint64_t arg3 = 0)
     {
-        log_info(format, arg0, arg1, arg2, arg3);
+        tt_record4_np(format, arg0, arg1, arg2, arg3);
+//        log_info(format, arg0, arg1, arg2, arg3);
     }
 }
 
@@ -99,14 +101,14 @@ struct udp_in_msg {
 };
 
 /**
- * Main function of the RX thread that is responsible for receiving packets, 
+ * Main function of the RX thread that is responsible for receiving packets,
  * assembling inbound messages, and sending back ACKs.
- * 
+ *
  * \param c
  *      Cluster object.
  * \param op
  *      Shuffle object that keeps track of the progress.
- * \param udp_port 
+ * \param udp_port
  *      Port number of the UDP socket used to receive packets.
  * \param tx_msgs
  *      List of outbound messages indexed by the rank of the receiver.
@@ -121,7 +123,7 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         panic("no UDP socket available at port %u", udp_port);
     }
 
-    // 
+    //
     std::vector<udp_in_msg> rx_msgs;
     rx_msgs.reserve(c.num_nodes);
     for (int i = 0; i < c.num_nodes; i++) {
@@ -214,12 +216,12 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
  * Main function of the TX thread that is responsible for scheduling outbound
  * messages, enforcing flow control (using a sliding window), and retransmitting
  * packets on timeouts.
- * 
+ *
  * \param c
  *      Cluster object.
  * \param op
  *      Shuffle object that keeps track of the progress.
- * \param udp_port 
+ * \param udp_port
  *      Port number of the UDP socket used to send packets.
  * \param tx_msgs
  *      List of outbound messages indexed by the rank of the receiver.

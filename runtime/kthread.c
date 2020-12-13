@@ -13,6 +13,7 @@
 #include <base/list.h>
 #include <base/lock.h>
 #include <base/log.h>
+#include <base/timetrace.h>
 #include <runtime/sync.h>
 #include <runtime/timer.h>
 
@@ -61,6 +62,19 @@ static struct kthread *allock(void)
 	return k;
 }
 
+static struct tt_buffer *alloc_tt_buf(void)
+{
+    struct tt_buffer *tt_buf;
+
+    tt_buf = aligned_alloc(CACHE_LINE_SIZE,
+			  align_up(sizeof(*tt_buf), CACHE_LINE_SIZE));
+	if (!tt_buf)
+		return NULL;
+
+	memset(tt_buf, 0, sizeof(*tt_buf));
+	return tt_buf;
+}
+
 /**
  * kthread_init_thread - initializes state for the kthread
  *
@@ -72,9 +86,16 @@ int kthread_init_thread(void)
 	if (!mykthread)
 		return -ENOMEM;
 
+	perthread_tt_buf = alloc_tt_buf();
+	if (!perthread_tt_buf)
+	    return -ENOMEM;
+
 	spin_lock_np(&klock);
 	mykthread->kthread_idx = nrks;
-	ks[nrks++] = mykthread;
+	ks[nrks] = mykthread;
+	tt_buffers[nrks] = perthread_tt_buf;
+	nrks++;
+	nr_tt_buffers = nrks;
 	assert(nrks <= maxks);
 	spin_unlock_np(&klock);
 

@@ -3,6 +3,7 @@ extern "C" {
 #include <net/ip.h>
 #include <runtime/runtime.h>
 #include <runtime/smalloc.h>
+#include <runtime/timetrace.h>
 }
 
 #include <fcntl.h>
@@ -13,7 +14,7 @@ extern "C" {
 #include <fstream>
 #include <sstream>
 #include <atomic>
-#include <signal.h>
+#include <csignal>
 
 #include "thread.h"
 
@@ -90,12 +91,16 @@ void print_help(const char* exec_cmd) {
            "log [msg]          Print all of the words that follow the command\n"
            "                   as a message to the log.\n"
            "\n"
+           " tt [options]      Manage time tracing:\n"
+           "  freeze           Stop recording time trace information until\n"
+           "                   print has been invoked\n"
+           "  print [file]     Dump timetrace information to file\n"
+           "\n"
            "exit               Exit the application.\n",
            exec_cmd
            );
     // TODO: should I give up homa in this project and use udp instead? the "thread_local" problem in shenango is really annoying when trying to do anything non-trivial
     // TODO: implement --epoll properly
-    // FIXME: add command "tt" for timetrace
     // FIXME: how to simulate the senario of 10000 sockets? should I implement it in another program?
     // TODO: get memory intensive background traffic workload up and running (can we add an option like --add-interference)
 }
@@ -217,6 +222,27 @@ log_cmd(std::vector<std::string>& words)
     return true;
 }
 
+bool
+tt_cmd(std::vector<std::string>& words)
+{
+    assert(words[0] == "tt");
+    for (size_t i = 1; i < words.size(); i++) {
+        if (words[i] == "freeze") {
+            tt_freeze();
+        } else if (words[i] == "print") {
+            FILE* file = std::fopen(words[i+1].c_str(), "a+");
+            if (!file)
+                panic("failed to open log file '%s'", words[i+1].c_str());
+            tt_dump(file);
+            i++;
+        } else {
+            log_err("Unknown option '%s'\n", words[i].c_str());
+            return false;
+        }
+    }
+    return true;
+}
+
 /**
  * Given a command that has been parsed into words, execute the command
  * corresponding to the words.
@@ -247,6 +273,8 @@ exec_words(std::vector<std::string>& words)
         exit(0);
     } else if (words[0] == "log") {
         return log_cmd(words);
+    } else if (words[0] == "tt") {
+        return tt_cmd(words);
     } else {
         printf("Unknown command '%s'", words[0].c_str());
         return false;
@@ -319,6 +347,8 @@ real_main(void* arg) {
 void
 sig_handler(int signum)
 {
+    tt_freeze();
+    tt_dump(stdout);
     panic("%s received, exiting...", strsignal(signum));
 }
 

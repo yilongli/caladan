@@ -44,6 +44,8 @@ if not options.plot_only:
         #        "--msg-skew-factor 2.0", nodes)
         do_cmd("run_bench --protocol udp --udp-port 5002 --policy LRPT --times 10", nodes)
         # do_cmd("run_bench --protocol tcp --policy hadoop --max-unacked 5 --max-seg 1400 --times 10", nodes)
+        do_cmd("tt freeze", nodes)
+        # do_cmd("tt print /users/yilongl/node.tt", nodes)
         log("Stopping nodes")
         stop_nodes()
     except Exception as e:
