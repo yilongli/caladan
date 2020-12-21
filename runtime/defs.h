@@ -22,6 +22,7 @@
 #include <runtime/thread.h>
 #include <runtime/rcu.h>
 #include <runtime/preempt.h>
+#include <runtime/timetrace.h>
 
 
 /*

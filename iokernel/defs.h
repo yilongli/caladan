@@ -11,6 +11,7 @@
 #include <base/mem.h>
 #undef LIST_HEAD /* hack to deal with DPDK being annoying */
 #include <base/list.h>
+#include <base/timetrace.h>
 #include <iokernel/control.h>
 #include <net/ethernet.h>
 

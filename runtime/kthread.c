@@ -7,6 +7,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sched.h>
 
 #include <base/atomic.h>
 #include <base/cpu.h>
@@ -62,19 +63,6 @@ static struct kthread *allock(void)
 	return k;
 }
 
-static struct tt_buffer *alloc_tt_buf(void)
-{
-    struct tt_buffer *tt_buf;
-
-    tt_buf = aligned_alloc(CACHE_LINE_SIZE,
-			  align_up(sizeof(*tt_buf), CACHE_LINE_SIZE));
-	if (!tt_buf)
-		return NULL;
-
-	memset(tt_buf, 0, sizeof(*tt_buf));
-	return tt_buf;
-}
-
 /**
  * kthread_init_thread - initializes state for the kthread
  *
@@ -82,20 +70,19 @@ static struct tt_buffer *alloc_tt_buf(void)
  */
 int kthread_init_thread(void)
 {
+    char tt_buf_name[16];
+
 	mykthread = allock();
 	if (!mykthread)
 		return -ENOMEM;
 
-	perthread_tt_buf = alloc_tt_buf();
-	if (!perthread_tt_buf)
+	snprintf(tt_buf_name, ARRAY_SIZE(tt_buf_name), "CPU %02d", sched_getcpu());
+	if (!tt_init_thread(tt_buf_name))
 	    return -ENOMEM;
 
 	spin_lock_np(&klock);
 	mykthread->kthread_idx = nrks;
-	ks[nrks] = mykthread;
-	tt_buffers[nrks] = perthread_tt_buf;
-	nrks++;
-	nr_tt_buffers = nrks;
+	ks[nrks++] = mykthread;
 	assert(nrks <= maxks);
 	spin_unlock_np(&klock);
 

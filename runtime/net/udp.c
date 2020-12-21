@@ -65,6 +65,7 @@ struct udpconn {
 /* handles ingress packets for UDP sockets */
 static void udp_conn_recv(struct trans_entry *e, struct mbuf *m)
 {
+    tt_record1_np("udp_conn_recv invoked, len %u", m->len);
 	udpconn_t *c = container_of(e, udpconn_t, e);
 	thread_t *th;
 
@@ -333,6 +334,7 @@ ssize_t udp_read_from(udpconn_t *c, void *buf, size_t len,
 
 static void udp_tx_release_mbuf(struct mbuf *m)
 {
+    tt_record1_np("udp_tx_release_mbuf invoked, head %p", m->head);
 	udpconn_t *c = (udpconn_t *)m->release_data;
 	thread_t *th = NULL;
 	bool free_conn;

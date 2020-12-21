@@ -1,5 +1,9 @@
 #!/bin/bash
 # The script copies modified information from this directory on my laptop to rcmaster.
 remote_host=$1
-target=yilongl@$remote_host.utah.cloudlab.us:/shome/caladan/apps/
-rsync -rtv --exclude-from=rsync-exclude.txt ./apps/shuffle $target
+target=yilongl@$remote_host.utah.cloudlab.us:/shome/caladan/
+rsync -rtv --exclude-from=rsync-exclude.txt ./apps/shuffle $target/apps/
+rsync -rtv --exclude-from=rsync-exclude.txt ./base $target
+rsync -rtv --exclude-from=rsync-exclude.txt ./runtime $target
+rsync -rtv --exclude-from=rsync-exclude.txt ./inc $target
+rsync -rtv --exclude-from=rsync-exclude.txt ./iokernel $target

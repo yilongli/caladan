@@ -3,16 +3,15 @@
  */
 
 #include <base/cpu.h>
+#include <base/log.h>
 #include <base/timetrace.h>
 
-/* Separate tt_buffers for each cpu or kthread: the meaning of the index depends
- * on the use-case; e.g., when timetrace is used in the runtime/app, there will
- * be @nrks (c.f. runtime/kthread.c) tt_buffer's in total.
+/* Separate tt_buffers for each kthread.
  */
 struct tt_buffer *tt_buffers[NCPU];
 
 /* actual number of tt_buffer's */
-unsigned int nr_tt_buffers;
+atomic_t nr_tt_buffers;
 
 /* Kernel thread-local timetrace buffer. */
 __thread struct tt_buffer *perthread_tt_buf;
@@ -22,6 +21,38 @@ __thread struct tt_buffer *perthread_tt_buf;
  * completed; other values mean tt_freeze has completed successfully.
  */
 static unsigned int tt_frozen;
+
+/**
+ * tt_init_thread - creates a thread-private tt_buffer for the current thread.
+ * @name:  Short descriptive name for the current thread; will appear in
+ *         time trace printouts.
+ *
+ * Return the new tt_buffer object if successful, or NULL if out of memory.
+ */
+struct tt_buffer *tt_init_thread(char *name)
+{
+    struct tt_buffer *tt_buf;
+    int tt_id;
+
+    if (perthread_tt_buf)
+        panic("thread-local tt_buffer already exists!");
+
+    tt_buf = aligned_alloc(CACHE_LINE_SIZE,
+			  align_up(sizeof(*tt_buf), CACHE_LINE_SIZE));
+    if (!tt_buf)
+        return NULL;
+    perthread_tt_buf = tt_buf;
+
+    tt_id = atomic_fetch_and_add(&nr_tt_buffers, 1);
+    if (tt_id >= ARRAY_SIZE(tt_buffers))
+        panic("tt_init_thread: too many kthreads!");
+    tt_buffers[tt_id] = tt_buf;
+
+    memset(tt_buf, 0, sizeof(*tt_buf));
+    strncpy(tt_buf->name, name, TT_BUF_NAME_LEN-1);
+
+    return tt_buf;
+}
 
 /**
  * tt_freeze() - Stop recording timetrace events until the trace has been
@@ -39,7 +70,7 @@ void tt_freeze(void)
     store_release(&tt_frozen, 1);
 
     /* busy-spin until all concurrent tt_record_buf()'s have finished */
-    for (i = 0; i < nr_tt_buffers; i++) {
+    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
         buffer = tt_buffers[i];
         while (load_acquire(&buffer->changing));
     }
@@ -58,6 +89,7 @@ int tt_dump(FILE *output)
     uint64_t start_time;
     int i;
     int result = 0;
+    double prev_micros, micros;
 
     /* Index of the next entry to return from each tt_buffer. */
     int pos[NCPU];
@@ -78,24 +110,24 @@ int tt_dump(FILE *output)
     }
 
     start_time = 0;
-    for (i = 0; i < nr_tt_buffers; i++) {
+    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
         buffer = tt_buffers[i];
         if (buffer->events[TT_BUF_SIZE-1].format == NULL) {
             pos[i] = 0;
         } else {
             int index = (buffer->next_index + 1) & (TT_BUF_SIZE-1);
-            struct tt_event *event = &buffer->events[index];
             pos[i] = index;
-            if (event->timestamp > start_time) {
-                start_time = event->timestamp;
-            }
+        }
+        struct tt_event *event = &buffer->events[pos[i]];
+        if (event->format && (event->timestamp > start_time)) {
+            start_time = event->timestamp;
         }
     }
 
     /* Skip over all events before start_time, in order to make
      * sure that there's no missing data in what we print.
      */
-    for (i = 0; i < nr_tt_buffers; i++) {
+    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
         buffer = tt_buffers[i];
         while ((buffer->events[pos[i]].timestamp < start_time)
                 && (pos[i] != buffer->next_index)) {
@@ -109,14 +141,15 @@ int tt_dump(FILE *output)
      * is full, then copy to user space and repeat.
      */
     buffered = 0;
-    while (true) {
+    prev_micros = 0.0;
+    while (1) {
         struct tt_event *event;
         int entry_length, available;
         int curr_buf = -1;
         uint64_t earliest_time = ~0lu;
 
         /* Check all the traces to find the earliest available event. */
-        for (i = 0; i < nr_tt_buffers; i++) {
+        for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
             buffer = tt_buffers[i];
             event = &buffer->events[pos[i]];
             if ((pos[i] != buffer->next_index)
@@ -132,12 +165,15 @@ int tt_dump(FILE *output)
 
         /* Format one event. */
         event = &(tt_buffers[curr_buf]->events[pos[curr_buf]]);
+        micros = (double) (event->timestamp - start_time) / cycles_per_us;
         available = TT_PF_BUF_SIZE - buffered;
         if (available == 0) {
             goto flush;
         }
         entry_length = snprintf(msg_storage + buffered, available,
-                "%lu [C%02d] ", (long unsigned int) event->timestamp, curr_buf);
+                "%lu | %9.3f us (+%8.3f us) [%-6s] ", event->timestamp,
+                micros, micros - prev_micros, tt_buffers[curr_buf]->name);
+        prev_micros = micros;
         if (available >= entry_length)
             entry_length += snprintf(
                     msg_storage + buffered + entry_length,
@@ -171,7 +207,7 @@ int tt_dump(FILE *output)
     }
 
     /* Reset tt_buffer's and resume recording */
-    for (i = 0; i < nr_tt_buffers; i++) {
+    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
         buffer = tt_buffers[i];
         buffer->events[TT_BUF_SIZE-1].format = NULL;
         buffer->next_index = 0;

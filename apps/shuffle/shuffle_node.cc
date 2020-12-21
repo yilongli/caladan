@@ -94,6 +94,7 @@ void print_help(const char* exec_cmd) {
            " tt [options]      Manage time tracing:\n"
            "  freeze           Stop recording time trace information until\n"
            "                   print has been invoked\n"
+           "  log              Dump timetrace information to the log file\n"
            "  print [file]     Dump timetrace information to file\n"
            "\n"
            "exit               Exit the application.\n",
@@ -152,9 +153,10 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         }
         elapsed_tsc = rdtsc() - elapsed_tsc;
         double elapsed_us = elapsed_tsc * 1.0 / cycles_per_us;
-
         double rx_speed = op.total_rx_bytes / (125.0 * elapsed_us);
         double tx_speed = op.total_tx_bytes / (125.0 * elapsed_us);
+        tt_record4_np("shuffle op %u completed in %u us (%u/%u Mbps)",
+                run, elapsed_us, rx_speed * 1000, tx_speed * 1000);
 
         // The master node blocks until all followers complete.
         if (!is_master) {
@@ -229,8 +231,10 @@ tt_cmd(std::vector<std::string>& words)
     for (size_t i = 1; i < words.size(); i++) {
         if (words[i] == "freeze") {
             tt_freeze();
+        } else if (words[i] == "log") {
+            tt_dump(cmd_line_opts->log_file);
         } else if (words[i] == "print") {
-            FILE* file = std::fopen(words[i+1].c_str(), "a+");
+            FILE* file = std::fopen(words[i+1].c_str(), "w");
             if (!file)
                 panic("failed to open log file '%s'", words[i+1].c_str());
             tt_dump(file);

@@ -4,6 +4,7 @@
 
 #include <rte_ethdev.h>
 #include <rte_lcore.h>
+#include <signal.h>
 
 #include <base/init.h>
 #include <base/log.h>
@@ -70,6 +71,13 @@ static int run_init_handlers(const char *phase, const struct init_entry *h,
 	return 0;
 }
 
+static void dump_timetrace(int signum)
+{
+    tt_freeze();
+    tt_dump(stdout);
+    exit(0);
+}
+
 /*
  * The main dataplane thread.
  */
@@ -93,7 +101,10 @@ void dataplane_loop(void)
 			rte_lcore_id());
 	fflush(stdout);
 
-	/* run until quit or killed */
+    /* dump timetrace before exit */
+    signal(SIGINT, dump_timetrace);
+
+    /* run until quit or killed */
 	for (;;) {
 		work_done = false;
 
@@ -138,7 +149,8 @@ static void print_usage(void)
 
 int main(int argc, char *argv[])
 {
-	int i, ret;
+	int i, ret, tt_id;
+	char tt_buf_name[16];
 
 	if (argc >= 2) {
 		if (!strcmp(argv[1], "simple")) {
@@ -180,10 +192,16 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	ret = run_init_handlers("iokernel", iok_init_handlers,
+    ret = run_init_handlers("iokernel", iok_init_handlers,
 			ARRAY_SIZE(iok_init_handlers));
 	if (ret)
 		return ret;
+
+	/* create tt_buffer for the dataplane thread */
+    snprintf(tt_buf_name, ARRAY_SIZE(tt_buf_name), "CPU %02u", sched_dp_core);
+    if (!tt_init_thread(tt_buf_name)) {
+        log_err("main: failed to create thread-local tt_buffer");
+    }
 
 	dataplane_loop();
 	return 0;
