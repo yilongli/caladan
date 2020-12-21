@@ -1,7 +1,10 @@
 # Latency Benchmarks
 
-First build DPDK (without driver modifications), then build
-dpdk_netperf in this directory with `make clean && make`.
+1) Build DPDK (without driver modifications)
+2) Modify global variable `dpdk_port` in `dpdk_netperf.c` to select
+the NIC port to be assigned to DPDK
+3) Build dpdk_netperf in this directory with `make clean && make`
+(`RTE_TARGET` can be overriden to select which DPDK build to link against).
 
 ## DPDK only
 To run the benchmark with pure DPDK on both machines:
@@ -13,7 +16,7 @@ sudo ./build/dpdk_netperf -l2 --socket-mem=128 -- UDP_SERVER 192.168.1.2
 
 On the client (IP 192.168.1.3):
 ```
-sudo ./build/dpdk_netperf -l2 --socket-mem=128 -- UDP_CLIENT 192.168.1.3 192.168.1.2 50000 8001 10 8
+sudo ./build/dpdk_netperf -l2 --socket-mem=128 -- UDP_CLIENT 192.168.1.3 192.168.1.2 50000 8001 10 8 5
 ```
 
 ## Shenango spinning (IOKernel + runtime)

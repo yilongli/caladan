@@ -29,12 +29,11 @@
 #   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-ifeq ($(RTE_SDK),)
-$(error "Please define RTE_SDK environment variable")
-endif
+# DPDK source directory, can be overridden by command line or environment
+RTE_SDK ?= $(PWD)/../../dpdk
 
 # Default target, can be overridden by command line or environment
-RTE_TARGET ?= x86_64-native-linuxapp-gcc
+RTE_TARGET ?= build
 
 include $(RTE_SDK)/mk/rte.vars.mk
 

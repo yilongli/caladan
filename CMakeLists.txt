@@ -7,7 +7,13 @@ include_directories(bindings/cc)
 include_directories(inc)
 include_directories(/lib/modules/4.15.0-109-generic/build/include)
 include_directories(/usr/src/linux-headers-4.15.0-109/arch/x86/include/)
-include_directories(/usr/include/dpdk/)
+include_directories(dpdk/config)
+include_directories(dpdk/lib/librte_net)
+include_directories(dpdk/lib/librte_mbuf)
+include_directories(dpdk/lib/librte_eal/common/include)
+include_directories(dpdk/lib/librte_eal/common/include/arch/x86)
+include_directories(dpdk/lib/librte_ethdev)
+#include_directories(/usr/include/dpdk/)
 
 add_executable(caladan
         apps/bench/callibrate.cc
