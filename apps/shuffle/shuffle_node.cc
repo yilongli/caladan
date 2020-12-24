@@ -17,6 +17,7 @@ extern "C" {
 #include <csignal>
 
 #include "thread.h"
+#include "timer.h"
 
 #include "cluster.h"
 #include "shuffle_tcp.h"
@@ -128,10 +129,12 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
     bool is_master = (cluster->local_rank == 0);
     for (size_t run = 0; run < opts.times; run++) {
         // Reset the shuffle_op object.
+        op.id = run;
         op.in_bufs.clear();
         op.in_bufs.resize(cluster->num_nodes);
         op.next_inmsg_addr = op.rx_data.get();
         op.acked_out_msgs.reset(nullptr);
+        op.udp_send_ready.reset(nullptr);
 
         // The master node broadcasts while the followers block.
         uint64_t bcast_tsc = rdtsc();
@@ -139,6 +142,8 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
             cluster->control_socks[0]->ReadFull(ctrl_msg, 2);
             assert(strncmp(ctrl_msg, "GO", 2) == 0);
         } else {
+            // Create a small gap in the iokernel timetrace to separate runs.
+            rt::Delay(10);
             for (auto& c : cluster->control_socks) {
                 c->WriteFull("GO", 2);
             }

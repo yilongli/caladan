@@ -109,6 +109,9 @@ void dataplane_loop(void)
     /* dump timetrace before exit */
     signal(SIGINT, dump_timetrace);
 
+    // FIXME: need to compute avg. cost to send and receive a packet; interesting
+    // that with 2 HT in the runtime, the dp load factor only increases by 0.03
+
     /* run until quit or killed */
     busy_cyc = idle_cyc = 0;
     last_busy = prev_tsc = rdtsc();

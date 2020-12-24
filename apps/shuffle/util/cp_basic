@@ -38,8 +38,7 @@ if not options.plot_only:
         # do_cmd("tcp connect 5000", nodes)
         # do_cmd("log hello!", nodes)
         do_cmd("udp open 5002", nodes)
-        # do_cmd("gen_workload --seed 100 --avg-msg-size 2000", nodes)
-        do_cmd("gen_workload --seed 100 --avg-msg-size 50000", nodes)
+        do_cmd("gen_workload --avg-msg-size 50000", nodes)
         # do_cmd("gen_workload --seed 100 --avg-msg-size 10000 "
         #        "--msg-skew-factor 2.0", nodes)
         do_cmd("run_bench --protocol udp --udp-port 5002 --policy LRPT --times 10", nodes)

@@ -176,7 +176,7 @@ bool rx_burst(void)
 	STAT_INC(RX_PULLED, nb_rx);
 	if (nb_rx > 0) {
         log_debug("rx: received %d packets on port %d", nb_rx, dp.port);
-        tt_record1("rx: received %d packets in a batch", nb_rx);
+        tt_record1("rx: received %d packets in a burst", nb_rx);
     }
 
 	for (i = 0; i < nb_rx; i++) {

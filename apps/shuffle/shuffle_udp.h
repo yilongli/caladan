@@ -30,6 +30,9 @@ struct udp_shuffle_msg_hdr {
     /// Rank of the message sender within the cluster.
     int16_t peer;
 
+    /// Unique identifier of the shuffle operation.
+    int16_t op_id;
+
 } __attribute__((__packed__));
 
 bool udp_shuffle(RunBenchOptions& opts, Cluster &c, shuffle_op &op);

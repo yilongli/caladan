@@ -22,7 +22,6 @@ namespace {
             uint64_t arg3 = 0)
     {
         tt_record4_np(format, arg0, arg1, arg2, arg3);
-//        log_info(format, arg0, arg1, arg2, arg3);
     }
 }
 
@@ -32,9 +31,16 @@ static const size_t MAX_PAYLOAD = UDP_MAX_PAYLOAD - sizeof(udp_shuffle_msg_hdr);
 /// Size of the UDP and IP headers, in bytes.
 static size_t UDP_IP_HDR_SIZE = sizeof(udp_hdr) + sizeof(ip_hdr);
 
+/// Network bandwidth available to our shuffle application, in Gbps.
+static const size_t NETWORK_BANDWIDTH = 25;
+//static const size_t NETWORK_BANDWIDTH = 10;
+
+/// RTTbytes = bandwdithGbps * 1000 * RTT_us / 8
+static const double RTT_BYTES = NETWORK_BANDWIDTH * 1e3 * 7.0 / 8;
+
 /// Size of the sliding window which controls the number of packets the sender
 /// is allowed to send ahead of the last acknowledged packet.
-static const size_t SEND_WND_SIZE = 8;
+static const size_t SEND_WND_SIZE = size_t((RTT_BYTES + 1499) / 1500);
 
 /**
  * Keep track of the progress of an outbound message.
@@ -136,6 +142,7 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
     int acked_msgs = 1;
     while ((completed_in_msgs < c.num_nodes) || (acked_msgs < c.num_nodes)) {
         // Read the next message header.
+        // TODO: how to handle a wave of DATA packets that come in the same batch at the driver level? (ideally we want to send out just a single ACK)
         ssize_t mbuf_size = udp_sock->ReadFrom(mbuf, ARRAY_SIZE(mbuf), &raddr);
         auto& msg_hdr = *reinterpret_cast<udp_shuffle_msg_hdr*>(mbuf);
         if (mbuf_size < (ssize_t) sizeof(msg_hdr)) {
@@ -144,6 +151,11 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         }
 
         int peer = msg_hdr.peer;
+        if (msg_hdr.op_id != op.id) {
+            tt_record("node-%d: dropped obsolete packet from op %d, ack_no %u",
+                    msg_hdr.op_id, msg_hdr.ack_no);
+            continue;
+        }
         if (msg_hdr.ack_no > 0) {
             // ACK message.
             tt_record("node-%d: received ACK %u from node-%d", c.local_rank,
@@ -154,8 +166,10 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
                 acked_msgs++;
             }
             rt::ScopedLock<rt::Mutex> _(tx_msg.send_wnd_mutex.get());
-            tx_msg.send_wnd_start = std::max(tx_msg.send_wnd_start,
-                    (size_t) msg_hdr.ack_no);
+            if (msg_hdr.ack_no > tx_msg.send_wnd_start) {
+                tx_msg.send_wnd_start = msg_hdr.ack_no;
+                op.udp_send_ready->Up();
+            }
         } else {
             // Normal data segment.
             tt_record("node-%d: receiving bytes %lu-%lu from node-%d",
@@ -203,6 +217,7 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
 
             // Send back an ACK.
             udp_shuffle_msg_hdr ack_hdr;
+            ack_hdr.op_id = op.id;
             ack_hdr.ack_no = rx_msg.recv_wnd_start;
             ack_hdr.peer = c.local_rank;
             tt_record("node-%d: sending ACK %u to node-%d", c.local_rank,
@@ -246,8 +261,7 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
     }
 
     // FIXME: how to set the link speed properly???
-//    QueueEstimator queue_estimator(10000);  // 10 Gbps
-    QueueEstimator queue_estimator(25000);  // 25 Gbps
+    QueueEstimator queue_estimator(NETWORK_BANDWIDTH * 1000);
 
     // The TX thread loops until all msgs are sent; it paced itself based on
     // the TX link speed and put itself to sleep when possible.
@@ -278,6 +292,8 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
             }
         }
         if (next_msg == nullptr) {
+            /* block until the RX thread gets more ACKs */
+            op.udp_send_ready->DownAll();
             continue;
         }
 
@@ -292,6 +308,7 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
             .msg_size = (uint32_t) msg_buf.len,
             .start = (uint32_t) bytes_sent,
             .peer = (int16_t) c.local_rank,
+            .op_id = (int16_t) op.id
         };
 
         // Send the message as a vector.
@@ -332,6 +349,7 @@ udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
         log_err("only LRPT policy is implemented");
         return false;
     }
+    op.udp_send_ready = std::make_unique<rt::Semaphore>(0);
 
     // @out_msgs keeps track of the status of each outbound message and is
     // shared between the TX and RX threads.
