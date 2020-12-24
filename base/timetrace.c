@@ -94,12 +94,6 @@ int tt_dump(FILE *output)
     /* Index of the next entry to return from each tt_buffer. */
     int pos[NCPU];
 
-    /* Messages are collected here, so they can be dumped out to
-     * user space in bulk.
-     */
-#define TT_PF_BUF_SIZE 4000
-    char msg_storage[TT_PF_BUF_SIZE];
-
     /* # bytes of data that have accumulated in msg_storage but haven't been
      * copied to user space yet. */
     int buffered;
@@ -137,14 +131,11 @@ int tt_dump(FILE *output)
 
 
     /* Each iteration through this loop processes one event (the one
-     * with the earliest timestamp). We buffer data until msg_storage
-     * is full, then copy to user space and repeat.
+     * with the earliest timestamp).
      */
-    buffered = 0;
     prev_micros = 0.0;
     while (1) {
         struct tt_event *event;
-        int entry_length, available;
         int curr_buf = -1;
         uint64_t earliest_time = ~0lu;
 
@@ -160,50 +151,21 @@ int tt_dump(FILE *output)
         }
         if (curr_buf < 0) {
             /* None of the traces have any more events to process. */
-            goto flush;
+            fflush(output);
+            break;
         }
 
         /* Format one event. */
         event = &(tt_buffers[curr_buf]->events[pos[curr_buf]]);
         micros = (double) (event->timestamp - start_time) / cycles_per_us;
-        available = TT_PF_BUF_SIZE - buffered;
-        if (available == 0) {
-            goto flush;
-        }
-        entry_length = snprintf(msg_storage + buffered, available,
-                "%lu | %9.3f us (+%8.3f us) [%-6s] ", event->timestamp,
-                micros, micros - prev_micros, tt_buffers[curr_buf]->name);
-        prev_micros = micros;
-        if (available >= entry_length)
-            entry_length += snprintf(
-                    msg_storage + buffered + entry_length,
-                    available - entry_length,
-                    event->format, event->arg0,
-                    event->arg1, event->arg2, event->arg3);
-        if (entry_length >= available) {
-            /* Not enough room for this entry. */
-            if (buffered == 0) {
-                /* Even a full buffer isn't enough for
-                 * this entry; truncate the entry. */
-                entry_length = available - 1;
-            } else {
-                goto flush;
-            }
-        }
-        /* Replace terminating null character with newline. */
-        msg_storage[buffered + entry_length] = '\n';
-        buffered += entry_length + 1;
-        pos[curr_buf] = (pos[curr_buf] + 1) & (TT_BUF_SIZE - 1);
-        continue;
 
-        flush:
-        if (fwrite(msg_storage, buffered, 1, output) < 1) {
-            result = -EFAULT;
-            goto done;
-        }
-        buffered = 0;
-        if (curr_buf < 0)
-            break;
+        fprintf(output, "%lu | %9.3f us (+%8.3f us) [%-6s] ", event->timestamp,
+                micros, micros - prev_micros, tt_buffers[curr_buf]->name);
+        fprintf(output, event->format, event->arg0, event->arg1, event->arg2,
+                event->arg3);
+        fputc('\n', output);
+        prev_micros = micros;
+        pos[curr_buf] = (pos[curr_buf] + 1) & (TT_BUF_SIZE - 1);
     }
 
     /* Reset tt_buffer's and resume recording */
@@ -214,7 +176,6 @@ int tt_dump(FILE *output)
     }
     store_release(&tt_frozen, 0);
 
-    done:
     return result;
 }
 

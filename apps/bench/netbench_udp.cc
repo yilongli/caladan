@@ -40,6 +40,8 @@ netaddr raddr;
 uint64_t n;
 // the mean service time in us.
 double st;
+// the number of bytes to send in the request/response payload
+uint32_t payload_len = sizeof(payload);
 
 void ServerWorker(rt::UdpConn *c) {
   union {
@@ -187,7 +189,7 @@ std::vector<double> PoissonWorker(rt::UdpConn *c, double req_rate,
 
   // Initialize timing measurement data structures.
   union {
-    unsigned char buf[32] = {};
+    unsigned char buf[rt::UdpConn::kMaxPayloadSize];
     payload p;
   };
 
@@ -218,8 +220,8 @@ std::vector<double> PoissonWorker(rt::UdpConn *c, double req_rate,
     p.idx = i;
     p.workn = work[i];
     p.tag = 0;
-    ssize_t ret = udp_send(buf, sizeof(buf), c->LocalAddr(), c->RemoteAddr());
-    if (ret != static_cast<ssize_t>(sizeof(buf)))
+    ssize_t ret = udp_send(buf, payload_len, c->LocalAddr(), c->RemoteAddr());
+    if (ret != payload_len && ret != -ENOBUFS)
       panic("udp write failed, ret = %ld", ret);
   }
 
@@ -333,10 +335,13 @@ void DoExperiment(double req_rate) {
   double p9999 = timings[count * 0.9999];
   double min = timings[0];
   double max = timings[timings.size() - 1];
+  size_t pkt_bytes =
+      payload_len + sizeof(udp_hdr) + sizeof(ip_hdr) + sizeof(eth_hdr);
   std::cout << std::setprecision(2) << std::fixed
             << "t: "       << threads
             << " rps: "    << reqs_per_sec
             << " n: "      << timings.size()
+            << " gbps: "   << reqs_per_sec * pkt_bytes * 8e-9
             << " min: "    << min
             << " mean: "   << mean
             << " 90%: "    << p9
@@ -383,8 +388,8 @@ int main(int argc, char *argv[]) {
     return -EINVAL;
   }
 
-  if (argc != 7) {
-    std::cerr << "usage: [cfg_file] client [#threads] [remote_ip] [n] [service_us]"
+  if (argc != 7 && argc != 8) {
+    std::cerr << "usage: [cfg_file] client [#threads] [remote_ip] [n] [service_us] [payload_len]"
               << std::endl;
     return -EINVAL;
   }
@@ -397,6 +402,14 @@ int main(int argc, char *argv[]) {
 
   n = std::stoll(argv[5], nullptr, 0);
   st = std::stod(argv[6], nullptr);
+  if (argc == 8)
+    payload_len = std::stol(argv[7], nullptr, 0);
+  if ((payload_len < sizeof(payload)) ||
+      (payload_len > rt::UdpConn::kMaxPayloadSize)) {
+    fprintf(stderr, "payload_len is not in range [%lu, %lu]\n",
+        sizeof(payload), rt::UdpConn::kMaxPayloadSize);
+    return -EINVAL;
+  }
 
   ret = runtime_init(argv[1], ClientHandler, NULL);
   if (ret) {
