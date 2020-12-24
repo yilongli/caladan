@@ -87,6 +87,11 @@ void dataplane_loop(void)
 #ifdef STATS
 	uint64_t next_log_time = microtime();
 #endif
+    uint64_t busy_cyc, idle_cyc;
+    uint64_t last_busy;
+    uint64_t now_tsc, prev_tsc;
+    bool tt_enable;
+    const uint64_t idle_threshold = cycles_per_us * 10;
 
 	/*
 	 * Check that the port is on the same NUMA node as the polling thread
@@ -105,6 +110,9 @@ void dataplane_loop(void)
     signal(SIGINT, dump_timetrace);
 
     /* run until quit or killed */
+    busy_cyc = idle_cyc = 0;
+    last_busy = prev_tsc = rdtsc();
+    tt_enable = true;
 	for (;;) {
 		work_done = false;
 
@@ -125,7 +133,25 @@ void dataplane_loop(void)
 
 		/* handle control messages */
 		if (!work_done)
-			dp_clients_rx_control_lrpcs();
+			work_done |= dp_clients_rx_control_lrpcs();
+
+		/* collect statistics to compute the busyness of the dataplane */
+        now_tsc = rdtsc();
+        if (work_done) {
+            last_busy = now_tsc;
+            busy_cyc += now_tsc - prev_tsc;
+            tt_enable = true;
+		} else {
+            idle_cyc += now_tsc - prev_tsc;
+            if (tt_enable && (now_tsc - last_busy > idle_threshold)) {
+                tt_enable = false;
+                idle_cyc -= (now_tsc - last_busy);
+                tt_record3("main: dataplane load factor 0.%u, busy %u, idle %u",
+                    busy_cyc * 100 / (busy_cyc+idle_cyc+1), busy_cyc, idle_cyc);
+                busy_cyc = idle_cyc = 0;
+            }
+        }
+        prev_tsc = now_tsc;
 
 		STAT_INC(BATCH_TOTAL, IOKERNEL_RX_BURST_SIZE);
 
@@ -149,7 +175,7 @@ static void print_usage(void)
 
 int main(int argc, char *argv[])
 {
-	int i, ret, tt_id;
+	int i, ret;
 	char tt_buf_name[16];
 
 	if (argc >= 2) {

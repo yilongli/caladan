@@ -353,6 +353,6 @@ extern bool tx_drain_completions(void);
 /*
  * other dataplane functions
  */
-extern void dp_clients_rx_control_lrpcs(void);
+extern uint16_t dp_clients_rx_control_lrpcs(void);
 extern bool commands_rx(void);
 extern void dpdk_print_eth_stats(void);

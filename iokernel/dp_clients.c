@@ -109,7 +109,7 @@ static void dp_clients_remove_client(struct proc *p)
 /*
  * Process a batch of messages from the control plane.
  */
-void dp_clients_rx_control_lrpcs(void)
+uint16_t dp_clients_rx_control_lrpcs(void)
 {
 	uint64_t cmd;
 	unsigned long payload;
@@ -134,6 +134,7 @@ void dp_clients_rx_control_lrpcs(void)
 
 		n_rx++;
 	}
+    return n_rx;
 }
 
 /*

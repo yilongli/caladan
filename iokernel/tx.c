@@ -269,6 +269,7 @@ full:
 	/* finally, send the packets on the wire */
 	ret = rte_eth_tx_burst(dp.port, 0, bufs, n_pkts);
 	log_debug("tx: transmitted %d packets on port %d", ret, dp.port);
+	tt_record1("tx: transmitted %d packets", ret);
 
 	/* apply back pressure if the NIC TX ring was full */
 	if (unlikely(ret < n_pkts)) {
