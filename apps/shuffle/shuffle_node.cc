@@ -363,6 +363,7 @@ sig_handler(int signum)
 
 int main(int argc, char* argv[]) {
     signal(SIGINT, sig_handler);
+    signal(SIGTERM, sig_handler);
     if (((argc >= 2) && (strcmp(argv[1], "--help") == 0)) || (argc == 1)) {
         print_help(argv[0]);
         return 0;

@@ -15,6 +15,9 @@ include_directories(dpdk/lib/librte_eal/common/include/arch/x86)
 include_directories(dpdk/lib/librte_ethdev)
 #include_directories(/usr/include/dpdk/)
 
+add_compile_definitions(IOKERNEL_STATS)
+add_compile_definitions(RUNTIME_STATS)
+
 add_executable(caladan
         apps/bench/callibrate.cc
         apps/bench/efficiency.cc

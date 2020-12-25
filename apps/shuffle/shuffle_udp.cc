@@ -14,7 +14,6 @@ extern "C" {
 #include "thread.h"
 #include "timer.h"
 
-// FIXME: implement real timetrace; log_info is way too slow (0.7~1.3 us per call!)
 namespace {
     inline void
     tt_record(const char* format,
@@ -123,6 +122,9 @@ void
 udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         std::vector<udp_out_msg>& tx_msgs)
 {
+    uint64_t total_cyc, idle_cyc;
+    uint64_t now;
+
     // FIXME: what if we want to use multiple UDP sockets?
     rt::UdpConn* udp_sock = c.udp_socks[udp_port].get();
     if (udp_sock == nullptr) {
@@ -136,6 +138,8 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         rx_msgs.emplace_back();
     }
 
+    total_cyc = rdtsc();
+    idle_cyc = 0;
     netaddr raddr{};
     char mbuf[2048];
     int completed_in_msgs = 1;
@@ -143,7 +147,10 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
     while ((completed_in_msgs < c.num_nodes) || (acked_msgs < c.num_nodes)) {
         // Read the next message header.
         // TODO: how to handle a wave of DATA packets that come in the same batch at the driver level? (ideally we want to send out just a single ACK)
+        now = rdtsc();
         ssize_t mbuf_size = udp_sock->ReadFrom(mbuf, ARRAY_SIZE(mbuf), &raddr);
+        // FIXME: this is not accurate; because readFrom actually perform quite a bit work!!!
+        idle_cyc += rdtsc() - now;
         auto& msg_hdr = *reinterpret_cast<udp_shuffle_msg_hdr*>(mbuf);
         if (mbuf_size < (ssize_t) sizeof(msg_hdr)) {
             panic("unknown mbuf size %ld (expected at least %lu bytes)",
@@ -225,6 +232,11 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
             udp_sock->WriteTo(&ack_hdr, sizeof(ack_hdr), &raddr);
         }
     }
+
+    total_cyc = rdtsc() - total_cyc;
+    uint64_t busy_cyc = total_cyc - idle_cyc;
+    tt_record("node-%d: RX thread load factor 0.%u, busy %u, idle %u",
+            c.local_rank, busy_cyc * 100 / total_cyc, busy_cyc, idle_cyc);
 }
 
 /**
@@ -245,9 +257,11 @@ void
 udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         std::vector<udp_out_msg>& tx_msgs)
 {
+    uint64_t total_cyc, idle_cyc;
+    uint64_t now;
+
     // @send_queue is the main data structure used to implement the LRPT policy.
     struct list_head send_queue = LIST_HEAD_INIT(send_queue);
-    uint64_t now = rdtsc();
     for (int i = 1; i < c.num_nodes; i++) {
         int peer = (c.local_rank + i) % c.num_nodes;
         tx_msgs[peer].last_ack_tsc = now;
@@ -272,6 +286,8 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
     // but maybe we can ignore that here? (two arguments: 1. buffer overflow is
     // rare (shouldn't happen in our experiment?); 2. timeout can be delegated
     // to Homa in a real impl.?).
+    total_cyc = rdtsc();
+    idle_cyc = 0;
     while (!list_empty(&send_queue)) {
         // FIXME: better impl. to avoid scanning the entire send queue?
 
@@ -284,16 +300,19 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
             rt::ScopedLock<rt::Mutex> _(msg->send_wnd_mutex.get());
             size_t send_wnd_start = msg->send_wnd_start;
             assert(msg->next_send_pkt >= send_wnd_start);
+            size_t pkts_left = msg->num_pkts - msg->next_send_pkt;
             size_t unacked_pkts = msg->next_send_pkt - send_wnd_start;
-            if ((unacked_pkts < SEND_WND_SIZE) &&
-                (msg->num_pkts - msg->send_wnd_start > max_pkts_left)) {
+            if ((unacked_pkts < SEND_WND_SIZE) && (pkts_left > max_pkts_left)) {
                 next_msg = msg;
-                max_pkts_left = msg->num_pkts - send_wnd_start;
+                max_pkts_left = pkts_left;
             }
         }
         if (next_msg == nullptr) {
             /* block until the RX thread gets more ACKs */
+            tt_record("node-%d: TX thread waiting for more ACKs", c.local_rank);
+            now = rdtsc();
             op.udp_send_ready->DownAll();
+            idle_cyc += rdtsc() - now;
             continue;
         }
 
@@ -324,22 +343,29 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
                     ret, iov[0].iov_len + iov[1].iov_len);
         }
 
-        // Implement packet pacing to avoid pushing too many packets to the
-        // network layer.
         next_msg->next_send_pkt++;
         if (next_msg->next_send_pkt >= next_msg->num_pkts) {
             list_del_from(&send_queue, &next_msg->sq_link);
             tt_record("node-%d: removed message to node-%d from send_queue",
                     c.local_rank, peer);
         }
+
+        // Implement packet pacing to avoid pushing too many packets to the
+        // network layer.
+        now = rdtsc();
         uint32_t drain_us =
-                queue_estimator.packetQueued(ret + UDP_IP_HDR_SIZE, rdtsc());
+                queue_estimator.packetQueued(ret + UDP_IP_HDR_SIZE, now);
         if (drain_us > 1) {
             // Sleep until the transmit queue is almost empty.
             tt_record("about to sleep %u us", drain_us - 1);
             rt::Sleep(drain_us - 1);
+            idle_cyc += rdtsc() - now;
         }
     }
+    total_cyc = rdtsc() - total_cyc;
+    uint64_t busy_cyc = total_cyc - idle_cyc;
+    tt_record("node-%d: TX thread load factor 0.%u, busy %u, idle %u",
+            c.local_rank, busy_cyc * 100 / total_cyc, busy_cyc, idle_cyc);
 }
 
 bool

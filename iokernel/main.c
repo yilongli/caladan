@@ -87,11 +87,14 @@ void dataplane_loop(void)
 #ifdef STATS
 	uint64_t next_log_time = microtime();
 #endif
-    uint64_t busy_cyc, idle_cyc;
+    uint64_t busy_cyc, idle_cyc, rx_cyc, tx_cyc;
     uint64_t last_busy;
     uint64_t now_tsc, prev_tsc;
     bool tt_enable;
     const uint64_t idle_threshold = cycles_per_us * 10;
+
+    uint32_t nb_tx, nb_rx;
+	static uint64_t last_stats[NR_STATS];
 
 	/*
 	 * Check that the port is on the same NUMA node as the polling thread
@@ -111,16 +114,26 @@ void dataplane_loop(void)
 
     // FIXME: need to compute avg. cost to send and receive a packet; interesting
     // that with 2 HT in the runtime, the dp load factor only increases by 0.03
-
-    /* run until quit or killed */
-    busy_cyc = idle_cyc = 0;
+    busy_cyc = idle_cyc = rx_cyc = tx_cyc = 0;
     last_busy = prev_tsc = rdtsc();
     tt_enable = true;
+    last_stats[TX_PULLED] = stats[TX_PULLED];
+    last_stats[RX_PULLED] = stats[RX_PULLED];
+
+    /* run until quit or killed */
 	for (;;) {
 		work_done = false;
 
 		/* handle a burst of ingress packets */
+#ifdef IOKERNEL_STATS
+		now_tsc = rdtsc();
+		if (rx_burst()) {
+		    rx_cyc += rdtsc() - now_tsc;
+		    work_done = true;
+		}
+#else
 		work_done |= rx_burst();
+#endif
 
 		/* adjust core assignments */
 		sched_poll();
@@ -129,7 +142,15 @@ void dataplane_loop(void)
 		work_done |= tx_drain_completions();
 
 		/* send a burst of egress packets */
+#ifdef IOKERNEL_STATS
+		now_tsc = rdtsc();
+		if (tx_burst()) {
+		    tx_cyc += rdtsc() - now_tsc;
+		    work_done = true;
+		}
+#else
 		work_done |= tx_burst();
+#endif
 
 		/* process a batch of commands from runtimes */
 		work_done |= commands_rx();
@@ -138,6 +159,7 @@ void dataplane_loop(void)
 		if (!work_done)
 			work_done |= dp_clients_rx_control_lrpcs();
 
+#ifdef IOKERNEL_STATS
 		/* collect statistics to compute the busyness of the dataplane */
         now_tsc = rdtsc();
         if (work_done) {
@@ -151,10 +173,18 @@ void dataplane_loop(void)
                 idle_cyc -= (now_tsc - last_busy);
                 tt_record3("main: dataplane load factor 0.%u, busy %u, idle %u",
                     busy_cyc * 100 / (busy_cyc+idle_cyc+1), busy_cyc, idle_cyc);
-                busy_cyc = idle_cyc = 0;
+
+                nb_tx = stats[TX_PULLED] - last_stats[TX_PULLED];
+                nb_rx = stats[RX_PULLED] - last_stats[RX_PULLED];
+                tt_record2("main: tx pkts %u, cyc %u", nb_tx, tx_cyc / nb_tx);
+                tt_record2("main: rx pkts %u, cyc %u", nb_rx, rx_cyc / nb_rx);
+                busy_cyc = idle_cyc = rx_cyc = tx_cyc = 0;
+                last_stats[TX_PULLED] = stats[TX_PULLED];
+                last_stats[RX_PULLED] = stats[RX_PULLED];
             }
         }
         prev_tsc = now_tsc;
+#endif
 
 		STAT_INC(BATCH_TOTAL, IOKERNEL_RX_BURST_SIZE);
 

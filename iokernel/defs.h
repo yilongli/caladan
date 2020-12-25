@@ -309,7 +309,7 @@ enum {
 extern uint64_t stats[NR_STATS];
 extern void print_stats(void);
 
-#ifdef STATS
+#if defined(STATS) || defined(IOKERNEL_STATS)
 #define STAT_INC(stat_name, amt) do { stats[stat_name] += amt; } while (0);
 #else
 #define STAT_INC(stat_name, amt) ;

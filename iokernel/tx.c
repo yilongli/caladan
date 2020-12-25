@@ -244,14 +244,14 @@ bool tx_burst(void)
 
 full:
 
-	stats[TX_PULLED] += pulltotal;
+	STAT_INC(TX_PULLED, pulltotal)
 
 	/* allocate mbufs */
 	if (n_pkts - n_bufs > 0) {
 		ret = rte_mempool_get_bulk(tx_mbuf_pool, (void **)&bufs[n_bufs],
 					n_pkts - n_bufs);
 		if (unlikely(ret)) {
-			stats[TX_COMPLETION_FAIL] += n_pkts - n_bufs;
+			STAT_INC(TX_COMPLETION_FAIL, n_pkts - n_bufs)
 			log_warn_ratelimited("tx: error getting %d mbufs from mempool", n_pkts - n_bufs);
 			return true;
 		}
