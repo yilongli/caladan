@@ -3,7 +3,10 @@
 extern "C" {
 #include <base/log.h>
 #include <net/ip.h>
+#include <runtime/smalloc.h>
 #include <runtime/timetrace.h>
+#include <runtime/thread.h>
+#include <runtime/ustats.h>
 }
 
 #include <memory>
@@ -15,12 +18,12 @@ extern "C" {
 #include "timer.h"
 
 namespace {
-    inline void
+    inline uint64_t
     tt_record(const char* format,
             uint64_t arg0 = 0, uint64_t arg1 = 0, uint64_t arg2 = 0,
             uint64_t arg3 = 0)
     {
-        tt_record4_np(format, arg0, arg1, arg2, arg3);
+        return tt_record4_np(format, arg0, arg1, arg2, arg3);
     }
 }
 
@@ -116,14 +119,15 @@ struct udp_in_msg {
  * \param udp_port
  *      Port number of the UDP socket used to receive packets.
  * \param tx_msgs
- *      List of outbound messages indexed by the rank of the receiver.
+ *      Array of outbound messages indexed by the rank of the receiver.
  */
 void
-udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
-        std::vector<udp_out_msg>& tx_msgs)
+udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
 {
-    uint64_t total_cyc, idle_cyc;
-    uint64_t now;
+    uint64_t start_tsc, idle_cyc;
+
+    start_tsc = rdtsc();
+    idle_cyc = ustats_get_counter(USTAT_UDP_BLOCK_CYCLES);
 
     // FIXME: what if we want to use multiple UDP sockets?
     rt::UdpConn* udp_sock = c.udp_socks[udp_port].get();
@@ -138,8 +142,6 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         rx_msgs.emplace_back();
     }
 
-    total_cyc = rdtsc();
-    idle_cyc = 0;
     netaddr raddr{};
     char mbuf[2048];
     int completed_in_msgs = 1;
@@ -147,10 +149,7 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
     while ((completed_in_msgs < c.num_nodes) || (acked_msgs < c.num_nodes)) {
         // Read the next message header.
         // TODO: how to handle a wave of DATA packets that come in the same batch at the driver level? (ideally we want to send out just a single ACK)
-        now = rdtsc();
         ssize_t mbuf_size = udp_sock->ReadFrom(mbuf, ARRAY_SIZE(mbuf), &raddr);
-        // FIXME: this is not accurate; because readFrom actually perform quite a bit work!!!
-        idle_cyc += rdtsc() - now;
         auto& msg_hdr = *reinterpret_cast<udp_shuffle_msg_hdr*>(mbuf);
         if (mbuf_size < (ssize_t) sizeof(msg_hdr)) {
             panic("unknown mbuf size %ld (expected at least %lu bytes)",
@@ -233,10 +232,9 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         }
     }
 
-    total_cyc = rdtsc() - total_cyc;
-    uint64_t busy_cyc = total_cyc - idle_cyc;
-    tt_record("node-%d: RX thread load factor 0.%u, busy %u, idle %u",
-            c.local_rank, busy_cyc * 100 / total_cyc, busy_cyc, idle_cyc);
+    idle_cyc = ustats_get_counter(USTAT_UDP_BLOCK_CYCLES) - idle_cyc;
+    tt_record("node-%d: RX thread done, busy_cyc %u", c.local_rank,
+            rdtsc() - start_tsc - idle_cyc);
 }
 
 /**
@@ -251,17 +249,20 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
  * \param udp_port
  *      Port number of the UDP socket used to send packets.
  * \param tx_msgs
- *      List of outbound messages indexed by the rank of the receiver.
+ *      Array of outbound messages indexed by the rank of the receiver.
  */
 void
-udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
-        std::vector<udp_out_msg>& tx_msgs)
+udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
 {
-    uint64_t total_cyc, idle_cyc;
+    uint64_t start_cyc, idle_cyc;
     uint64_t now;
+
+    start_cyc = rdtsc();
+    idle_cyc = 0;
 
     // @send_queue is the main data structure used to implement the LRPT policy.
     struct list_head send_queue = LIST_HEAD_INIT(send_queue);
+    now = rdtsc();
     for (int i = 1; i < c.num_nodes; i++) {
         int peer = (c.local_rank + i) % c.num_nodes;
         tx_msgs[peer].last_ack_tsc = now;
@@ -286,8 +287,6 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
     // but maybe we can ignore that here? (two arguments: 1. buffer overflow is
     // rare (shouldn't happen in our experiment?); 2. timeout can be delegated
     // to Homa in a real impl.?).
-    total_cyc = rdtsc();
-    idle_cyc = 0;
     while (!list_empty(&send_queue)) {
         // FIXME: better impl. to avoid scanning the entire send queue?
 
@@ -309,8 +308,8 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
         }
         if (next_msg == nullptr) {
             /* block until the RX thread gets more ACKs */
-            tt_record("node-%d: TX thread waiting for more ACKs", c.local_rank);
-            now = rdtsc();
+            now = tt_record("node-%d: TX thread waiting for more ACKs",
+                    c.local_rank);
             op.udp_send_ready->DownAll();
             idle_cyc += rdtsc() - now;
             continue;
@@ -352,58 +351,62 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port,
 
         // Implement packet pacing to avoid pushing too many packets to the
         // network layer.
-        now = rdtsc();
         uint32_t drain_us =
-                queue_estimator.packetQueued(ret + UDP_IP_HDR_SIZE, now);
+                queue_estimator.packetQueued(ret + UDP_IP_HDR_SIZE, rdtsc());
         if (drain_us > 1) {
             // Sleep until the transmit queue is almost empty.
-            tt_record("about to sleep %u us", drain_us - 1);
+            now = tt_record("about to sleep %u us", drain_us - 1);
             rt::Sleep(drain_us - 1);
             idle_cyc += rdtsc() - now;
         }
     }
-    total_cyc = rdtsc() - total_cyc;
-    uint64_t busy_cyc = total_cyc - idle_cyc;
-    tt_record("node-%d: TX thread load factor 0.%u, busy %u, idle %u",
-            c.local_rank, busy_cyc * 100 / total_cyc, busy_cyc, idle_cyc);
+    tt_record("node-%d: TX thread done, busy_cyc %u", c.local_rank,
+            rdtsc() - start_cyc - idle_cyc);
 }
 
 bool
 udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
 {
+    tt_record("udp_shuffle: invoked");
+    rt::Yield();
+
     if (opts.policy != ShufflePolicy::LRPT) {
         log_err("only LRPT policy is implemented");
         return false;
     }
-    op.udp_send_ready = std::make_unique<rt::Semaphore>(0);
 
     // @out_msgs keeps track of the status of each outbound message and is
     // shared between the TX and RX threads.
-    std::vector<udp_out_msg> out_msgs;
-    out_msgs.reserve(c.num_nodes);
+    auto* out_msgs = (udp_out_msg*) smalloc(sizeof(udp_out_msg) * c.num_nodes);
     for (int i = 0; i < c.num_nodes; i++) {
         size_t num_pkts = (op.out_bufs[i].len + MAX_PAYLOAD - 1) / MAX_PAYLOAD;
         if (i == c.local_rank) {
             num_pkts = 0;
         }
-        out_msgs.emplace_back(i, num_pkts);
+        new (&out_msgs[i]) udp_out_msg(i, num_pkts);
     }
 
-    // Copy the message destined to itself directly.
-    int self = c.local_rank;
-    op.in_bufs[self].addr = op.next_inmsg_addr.fetch_add(op.out_bufs[self].len);
-    op.in_bufs[self].len = op.out_bufs[self].len;
-    memcpy(op.in_bufs[self].addr, op.out_bufs[self].addr, op.in_bufs[self].len);
-
-    // Spin up a thread to handle the receive-side logic of shuffle; the rest of
-    // this method will handle the send-side logic.
+    // Spin up a thread to handle the receive-side logic of shuffle; the rest
+    // of this method will handle the send-side logic.
+    tt_record("udp_shuffle: spawn RX thread");
     rt::Thread rx_main([&] {
         udp_rx_main(c, op, opts.udp_port, out_msgs);
     });
 
-    // Execute the send-side logic and wait for the receive thread to finish.
+    // Execute the send-side logic
     udp_tx_main(c, op, opts.udp_port, out_msgs);
-    rx_main.Join();
 
+    // Copy the message destined to itself directly
+    int self = c.local_rank;
+    op.in_bufs[self].addr = op.next_inmsg_addr.fetch_add(op.out_bufs[self].len);
+    op.in_bufs[self].len = op.out_bufs[self].len;
+    memcpy(op.in_bufs[self].addr, op.out_bufs[self].addr, op.in_bufs[self].len);
+    tt_record("udp_shuffle: copied local msg");
+
+    // And wait for the receive thread to finish.
+    rx_main.Join();
+    tt_record("udp_shuffle: join RX thread");
+
+    sfree(out_msgs);
     return true;
 }

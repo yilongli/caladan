@@ -7,39 +7,44 @@
 #include <base/timetrace.h>
 #include <runtime/preempt.h>
 
+/*
+ * internal implementation of tt_recordN_np(); unfortunately, it can't be
+ * inlined as it requires method getk() inside runtime/defs.h
+ */
+extern uint64_t __tt_record_np(const char* format, uint32_t arg0,
+        uint32_t arg1, uint32_t arg2, uint32_t arg3);
 
 /**
- * tt_recordN_np - disables preemption during the call to tt_recordN().
+ * tt_recordN_np - disables preemption when recording the timetrace message.
  */
-static inline void tt_record4_np(const char* format, uint32_t arg0,
+static inline uint64_t tt_record4_np(const char* format, uint32_t arg0,
         uint32_t arg1, uint32_t arg2, uint32_t arg3)
 {
-    /* disable preemption to prevent concurrent writes to the same tt_buffer:
-     * this can happen when one uthread is migrated to another cpu during
-     * tt_recordN(). */
-	preempt_disable();
-	tt_record4(format, arg0, arg1, arg2, arg3);
-    preempt_enable();
+#if ENABLE_TIME_TRACE
+    return __tt_record_np(format, arg0, arg1, arg2, arg3);
+#else
+	return 0;
+#endif
 }
 
-static inline void tt_record3_np(const char* format, uint32_t arg0,
+static inline uint64_t tt_record3_np(const char* format, uint32_t arg0,
         uint32_t arg1, uint32_t arg2)
 {
-    tt_record4_np(format, arg0, arg1, arg2, 0);
+    return tt_record4_np(format, arg0, arg1, arg2, 0);
 }
 
-static inline void tt_record2_np(const char* format, uint32_t arg0,
+static inline uint64_t tt_record2_np(const char* format, uint32_t arg0,
         uint32_t arg1)
 {
-    tt_record4_np(format, arg0, arg1, 0, 0);
+    return tt_record4_np(format, arg0, arg1, 0, 0);
 }
 
-static inline void tt_record1_np(const char* format, uint32_t arg0)
+static inline uint64_t tt_record1_np(const char* format, uint32_t arg0)
 {
-    tt_record4_np(format, arg0, 0, 0, 0);
+    return tt_record4_np(format, arg0, 0, 0, 0);
 }
 
-static inline void tt_record_np(const char* format)
+static inline uint64_t tt_record_np(const char* format)
 {
-    tt_record4_np(format, 0, 0, 0, 0);
+    return tt_record4_np(format, 0, 0, 0, 0);
 }

@@ -437,13 +437,6 @@ static int control_pin_thread(pid_t tid, int core)
 static void *control_thread(void *data)
 {
     int ret;
-	char tt_buf_name[16];
-
-    /* create tt_buffer for the control plane thread */
-    snprintf(tt_buf_name, ARRAY_SIZE(tt_buf_name), "CPU %02u", sched_ctrl_core);
-    if (!tt_init_thread(tt_buf_name)) {
-        log_err("control: failed to create thread-local tt_buffer");
-    }
 
     /* pin to our assigned core */
 	ret = control_pin_thread(thread_gettid(), sched_ctrl_core);

@@ -23,6 +23,7 @@
 #include <runtime/rcu.h>
 #include <runtime/preempt.h>
 #include <runtime/timetrace.h>
+#include <runtime/ustats.h>
 
 
 /*
@@ -111,6 +112,9 @@ struct thread {
 #ifdef GC
 	struct list_node	gc_link;
 	unsigned int		onk;
+#endif
+#ifdef RUNTIME_STATS
+	uint64_t        stats[USTAT_NR];
 #endif
 };
 
@@ -344,6 +348,7 @@ enum {
 	/* scheduler counters */
 	STAT_RESCHEDULES = 0,
 	STAT_SCHED_CYCLES,
+	STAT_SOFTIRQ_CYCLES,
 	STAT_PROGRAM_CYCLES,
 	STAT_THREADS_STOLEN,
 	STAT_SOFTIRQS_STOLEN,

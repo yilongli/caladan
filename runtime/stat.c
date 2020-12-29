@@ -23,6 +23,7 @@ static const char *stat_names[] = {
 	/* scheduler counters */
 	"reschedules",
 	"sched_cycles",
+	"softirq_cycles",
 	"program_cycles",
 	"threads_stolen",
 	"softirqs_stolen",

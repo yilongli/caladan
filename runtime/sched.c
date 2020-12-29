@@ -290,7 +290,7 @@ static __noinline struct thread *do_watchdog(struct kthread *l)
 static __noreturn __noinline void schedule(void)
 {
 	struct kthread *r = NULL, *l = myk();
-	uint64_t start_tsc, end_tsc;
+	uint64_t start_tsc, end_tsc, idle_tsc = 0, park_tsc;
 	thread_t *th = NULL;
 	unsigned int start_idx;
 	unsigned int iters = 0;
@@ -315,6 +315,9 @@ static __noreturn __noinline void schedule(void)
 	STAT(RESCHEDULES)++;
 	start_tsc = rdtsc();
 	STAT(PROGRAM_CYCLES) += start_tsc - last_tsc;
+	tt_record4_tsc(l->curr_cpu, start_tsc, "sched: enter schedule, "
+            "prog_cyc %u, sched_cyc %u, softirq_cyc %u",
+            STAT(PROGRAM_CYCLES), STAT(SCHED_CYCLES), STAT(SOFTIRQ_CYCLES), 0);
 
 	/* increment the RCU generation number (even is in scheduler) */
 	store_release(&l->rcu_gen, l->rcu_gen + 1);
@@ -392,7 +395,13 @@ again:
 	spin_unlock(&l->lock);
 
 	/* did not find anything to run, park this kthread */
-	STAT(SCHED_CYCLES) += rdtsc() - start_tsc;
+	park_tsc = rdtsc();
+	if (!idle_tsc) {
+	    idle_tsc = start_tsc;
+        tt_record4_tsc(l->curr_cpu, park_tsc, "sched: nothing to do",
+                0, 0, 0, 0);
+    }
+	STAT(SCHED_CYCLES) += park_tsc - start_tsc;
 	/* we may have got a preempt signal before voluntarily yielding */
 	kthread_park(!preempt_cede_needed());
 	start_tsc = rdtsc();
@@ -420,6 +429,11 @@ done:
 	/* update exit stat counters */
 	end_tsc = rdtsc();
 	STAT(SCHED_CYCLES) += end_tsc - start_tsc;
+    if (idle_tsc) {
+        tt_record4_tsc(l->curr_cpu, end_tsc, "sched: finally got work, "
+                "prog_cyc %u, sched_cyc %u, idle_cyc %u", STAT(PROGRAM_CYCLES),
+                STAT(SCHED_CYCLES), end_tsc - idle_tsc, 0);
+    }
 	last_tsc = end_tsc;
 	if (cores_have_affinity(th->last_cpu, l->curr_cpu))
 		STAT(LOCAL_RUNS)++;
@@ -677,6 +691,9 @@ static __always_inline thread_t *__thread_create(void)
 	th->main_thread = false;
 	th->last_cpu = myk()->curr_cpu;
 	th->run_start_tsc = UINT64_MAX;
+#ifdef RUNTIME_STATS
+	memset(th->stats, 0, sizeof(th->stats));
+#endif
 
 	return th;
 }

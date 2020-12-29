@@ -124,7 +124,8 @@ static void rx_one_pkt(struct rte_mbuf *buf)
 			log_debug_ratelimited("rx: failed to send unicast packet to runtime");
 			rte_pktmbuf_free(buf);
 		} else {
-		    tt_record1("rx: sent packet to runtime, len %u", net_hdr->len);
+		    tt_record1(sched_dp_core, "rx: sent packet to runtime, len %u",
+		            net_hdr->len);
 		}
 		return;
 	}
@@ -176,7 +177,7 @@ bool rx_burst(void)
 	STAT_INC(RX_PULLED, nb_rx);
 	if (nb_rx > 0) {
         log_debug("rx: received %d packets on port %d", nb_rx, dp.port);
-        tt_record1("rx: received %d packets in a burst", nb_rx);
+        tt_record1(sched_dp_core, "rx: received %d packets in a burst", nb_rx);
     }
 
 	for (i = 0; i < nb_rx; i++) {

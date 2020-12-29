@@ -171,13 +171,16 @@ void dataplane_loop(void)
             if (tt_enable && (now_tsc - last_busy > idle_threshold)) {
                 tt_enable = false;
                 idle_cyc -= (now_tsc - last_busy);
-                tt_record3("main: dataplane load factor 0.%u, busy %u, idle %u",
+                tt_record3(sched_dp_core,
+                    "main: dataplane load factor 0.%u, busy %u, idle %u",
                     busy_cyc * 100 / (busy_cyc+idle_cyc+1), busy_cyc, idle_cyc);
 
                 nb_tx = stats[TX_PULLED] - last_stats[TX_PULLED];
                 nb_rx = stats[RX_PULLED] - last_stats[RX_PULLED];
-                tt_record2("main: tx pkts %u, cyc %u", nb_tx, tx_cyc / nb_tx);
-                tt_record2("main: rx pkts %u, cyc %u", nb_rx, rx_cyc / nb_rx);
+                tt_record2(sched_dp_core, "main: tx pkts %u, cyc %u", nb_tx,
+                    tx_cyc/(nb_tx+1));
+                tt_record2(sched_dp_core, "main: rx pkts %u, cyc %u", nb_rx,
+                    rx_cyc/(nb_rx+1));
                 busy_cyc = idle_cyc = rx_cyc = tx_cyc = 0;
                 last_stats[TX_PULLED] = stats[TX_PULLED];
                 last_stats[RX_PULLED] = stats[RX_PULLED];
@@ -209,7 +212,6 @@ static void print_usage(void)
 int main(int argc, char *argv[])
 {
 	int i, ret;
-	char tt_buf_name[16];
 
 	if (argc >= 2) {
 		if (!strcmp(argv[1], "simple")) {
@@ -255,12 +257,6 @@ int main(int argc, char *argv[])
 			ARRAY_SIZE(iok_init_handlers));
 	if (ret)
 		return ret;
-
-	/* create tt_buffer for the dataplane thread */
-    snprintf(tt_buf_name, ARRAY_SIZE(tt_buf_name), "CPU %02u", sched_dp_core);
-    if (!tt_init_thread(tt_buf_name)) {
-        log_err("main: failed to create thread-local tt_buffer");
-    }
 
 	dataplane_loop();
 	return 0;

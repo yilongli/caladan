@@ -23,6 +23,12 @@ static void softirq_fn(void *arg)
 {
 	struct softirq_work *w = arg;
 	int i;
+	uint64_t start_tsc, end_tsc;
+	unsigned cpu_id;
+
+	cpu_id = myk()->curr_cpu;
+	start_tsc = rdtsc();
+	tt_record4_tsc(cpu_id, start_tsc, "softirq_fn: invoked", 0, 0, 0, 0);
 
 	/* complete TX requests and free packets */
 	for (i = 0; i < w->compl_cnt; i++)
@@ -43,6 +49,10 @@ static void softirq_fn(void *arg)
 	/* handle any pending timeouts */
 	if (timer_needed(w->k))
 		timer_softirq(w->k, w->timer_budget);
+
+	end_tsc = rdtsc();
+    STAT(SOFTIRQ_CYCLES) += end_tsc - start_tsc;
+    tt_record4_tsc(cpu_id, end_tsc, "softirq_fn: finished", 0, 0, 0, 0);
 }
 
 static void softirq_gather_work(struct softirq_work *w, struct kthread *k,

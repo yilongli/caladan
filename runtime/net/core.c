@@ -368,7 +368,8 @@ static void net_tx_raw(struct mbuf *m)
 	STAT(TX_PACKETS)++;
 	STAT(TX_BYTES) += len;
 
-    tt_record2("net_tx_raw: about to send pkt, head %p, len %u", m->head, m->len);
+    tt_record2(k->curr_cpu, "net_tx_raw: about to send pkt, head %p, len %u",
+            (uint32_t) m->head, m->len);
 	if (unlikely(net_ops.tx_single(m))) {
 		mbufq_push_tail(&k->txpktq_overflow, m);
 		STAT(TXQ_OVERFLOW)++;

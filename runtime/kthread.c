@@ -14,7 +14,6 @@
 #include <base/list.h>
 #include <base/lock.h>
 #include <base/log.h>
-#include <base/timetrace.h>
 #include <runtime/sync.h>
 #include <runtime/timer.h>
 
@@ -70,15 +69,9 @@ static struct kthread *allock(void)
  */
 int kthread_init_thread(void)
 {
-    char tt_buf_name[16];
-
 	mykthread = allock();
 	if (!mykthread)
 		return -ENOMEM;
-
-	snprintf(tt_buf_name, ARRAY_SIZE(tt_buf_name), "CPU %02d", sched_getcpu());
-	if (!tt_init_thread(tt_buf_name))
-	    return -ENOMEM;
 
 	spin_lock_np(&klock);
 	mykthread->kthread_idx = nrks;

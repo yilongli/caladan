@@ -296,8 +296,14 @@ ssize_t udp_read_from(udpconn_t *c, void *buf, size_t len,
 	spin_lock_np(&c->inq_lock);
 
 	/* block until there is an actionable event */
+#ifdef RUNTIME_STATS
+	uint64_t wait_tsc = rdtsc();
+#endif
 	while (mbufq_empty(&c->inq) && !c->inq_err && !c->shutdown)
 		waitq_wait(&c->inq_wq, &c->inq_lock);
+#ifdef RUNTIME_STATS
+	thread_self()->stats[USTAT_UDP_BLOCK_CYCLES] += rdtsc() - wait_tsc;
+#endif
 
 	/* is the socket drained and shutdown? */
 	if (mbufq_empty(&c->inq) && c->shutdown) {
@@ -334,7 +340,7 @@ ssize_t udp_read_from(udpconn_t *c, void *buf, size_t len,
 
 static void udp_tx_release_mbuf(struct mbuf *m)
 {
-    tt_record1_np("udp_tx_release_mbuf invoked, head %p", m->head);
+//    tt_record1_np("udp_tx_release_mbuf invoked, head %p", m->head);
 	udpconn_t *c = (udpconn_t *)m->release_data;
 	thread_t *th = NULL;
 	bool free_conn;
@@ -412,8 +418,14 @@ ssize_t udp_writev_to(udpconn_t *c, const struct iovec *iov, const int iovcnt,
 	spin_lock_np(&c->outq_lock);
 
 	/* block until there is an actionable event */
+#ifdef RUNTIME_STATS
+	uint64_t wait_tsc = rdtsc();
+#endif
 	while (c->outq_len >= c->outq_cap && !c->shutdown)
-		waitq_wait(&c->outq_wq, &c->outq_lock);
+        waitq_wait(&c->outq_wq, &c->outq_lock);
+#ifdef RUNTIME_STATS
+    thread_self()->stats[USTAT_UDP_BLOCK_CYCLES] += rdtsc() - wait_tsc;
+#endif
 
 	/* is the socket shutdown? */
 	if (c->shutdown) {

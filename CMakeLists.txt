@@ -247,6 +247,8 @@ add_executable(caladan
         runtime/softirq.c
         runtime/stack.c
         runtime/stat.c
+        runtime/timetrace.c
+        runtime/ustat.c
         runtime/storage.c
         runtime/sync.c
         runtime/timer.c

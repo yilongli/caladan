@@ -6,15 +6,11 @@
 #include <base/log.h>
 #include <base/timetrace.h>
 
-/* Separate tt_buffers for each kthread.
+#include <sched.h>
+
+/* Separate tt_buffers for each cpu.
  */
 struct tt_buffer *tt_buffers[NCPU];
-
-/* actual number of tt_buffer's */
-atomic_t nr_tt_buffers;
-
-/* Kernel thread-local timetrace buffer. */
-__thread struct tt_buffer *perthread_tt_buf;
 
 /* Zero means that tt_freeze has not been called since the last time the
  * timetrace was dumped; one means tt_freeze has been called but has not
@@ -23,35 +19,25 @@ __thread struct tt_buffer *perthread_tt_buf;
 static unsigned int tt_frozen;
 
 /**
- * tt_init_thread - creates a thread-private tt_buffer for the current thread.
- * @name:  Short descriptive name for the current thread; will appear in
- *         time trace printouts.
+ * tt_init - creates core-private tt_buffer's for all cpus in the system.
  *
- * Return the new tt_buffer object if successful, or NULL if out of memory.
+ * Return:    0 for success, else a negative errno.
  */
-struct tt_buffer *tt_init_thread(char *name)
+int tt_init()
 {
+    int i;
     struct tt_buffer *tt_buf;
-    int tt_id;
 
-    if (perthread_tt_buf)
-        panic("thread-local tt_buffer already exists!");
+    for (i = 0; i < cpu_count; i++) {
+        tt_buf = aligned_alloc(CACHE_LINE_SIZE,
+                align_up(sizeof(*tt_buf), CACHE_LINE_SIZE));
+        if (!tt_buf)
+            return -ENOMEM;
 
-    tt_buf = aligned_alloc(CACHE_LINE_SIZE,
-			  align_up(sizeof(*tt_buf), CACHE_LINE_SIZE));
-    if (!tt_buf)
-        return NULL;
-    perthread_tt_buf = tt_buf;
-
-    tt_id = atomic_fetch_and_add(&nr_tt_buffers, 1);
-    if (tt_id >= ARRAY_SIZE(tt_buffers))
-        panic("tt_init_thread: too many kthreads!");
-    tt_buffers[tt_id] = tt_buf;
-
-    memset(tt_buf, 0, sizeof(*tt_buf));
-    strncpy(tt_buf->name, name, TT_BUF_NAME_LEN-1);
-
-    return tt_buf;
+        tt_buf->cpu_id = i;
+        tt_buffers[i] = tt_buf;
+    }
+    return 0;
 }
 
 /**
@@ -66,11 +52,11 @@ void tt_freeze(void)
 
     if (load_acquire(&tt_frozen))
         return;
-    tt_record("timetrace frozen");
+    tt_record0(sched_getcpu(), "timetrace frozen");
     store_release(&tt_frozen, 1);
 
     /* busy-spin until all concurrent tt_record_buf()'s have finished */
-    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
+    for (i = 0; i < cpu_count; i++) {
         buffer = tt_buffers[i];
         while (load_acquire(&buffer->changing));
     }
@@ -94,17 +80,13 @@ int tt_dump(FILE *output)
     /* Index of the next entry to return from each tt_buffer. */
     int pos[NCPU];
 
-    /* # bytes of data that have accumulated in msg_storage but haven't been
-     * copied to user space yet. */
-    int buffered;
-
     /* tt_freeze() must be called before */
     if (load_acquire(&tt_frozen) < 2) {
         return -EFAULT;
     }
 
     start_time = 0;
-    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
+    for (i = 0; i < cpu_count; i++) {
         buffer = tt_buffers[i];
         if (buffer->events[TT_BUF_SIZE-1].format == NULL) {
             pos[i] = 0;
@@ -121,7 +103,7 @@ int tt_dump(FILE *output)
     /* Skip over all events before start_time, in order to make
      * sure that there's no missing data in what we print.
      */
-    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
+    for (i = 0; i < cpu_count; i++) {
         buffer = tt_buffers[i];
         while ((buffer->events[pos[i]].timestamp < start_time)
                 && (pos[i] != buffer->next_index)) {
@@ -140,7 +122,7 @@ int tt_dump(FILE *output)
         uint64_t earliest_time = ~0lu;
 
         /* Check all the traces to find the earliest available event. */
-        for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
+        for (i = 0; i < cpu_count; i++) {
             buffer = tt_buffers[i];
             event = &buffer->events[pos[i]];
             if ((pos[i] != buffer->next_index)
@@ -159,8 +141,9 @@ int tt_dump(FILE *output)
         event = &(tt_buffers[curr_buf]->events[pos[curr_buf]]);
         micros = (double) (event->timestamp - start_time) / cycles_per_us;
 
-        fprintf(output, "%lu | %9.3f us (+%8.3f us) [%-6s] ", event->timestamp,
-                micros, micros - prev_micros, tt_buffers[curr_buf]->name);
+        fprintf(output, "%lu | %9.3f us (+%8.3f us) [CPU %02u] ",
+                event->timestamp, micros, micros - prev_micros,
+                tt_buffers[curr_buf]->cpu_id);
         fprintf(output, event->format, event->arg0, event->arg1, event->arg2,
                 event->arg3);
         fputc('\n', output);
@@ -169,7 +152,7 @@ int tt_dump(FILE *output)
     }
 
     /* Reset tt_buffer's and resume recording */
-    for (i = 0; i < atomic_read(&nr_tt_buffers); i++) {
+    for (i = 0; i < cpu_count; i++) {
         buffer = tt_buffers[i];
         buffer->events[TT_BUF_SIZE-1].format = NULL;
         buffer->next_index = 0;

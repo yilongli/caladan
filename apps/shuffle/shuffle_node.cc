@@ -134,7 +134,7 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         op.in_bufs.resize(cluster->num_nodes);
         op.next_inmsg_addr = op.rx_data.get();
         op.acked_out_msgs.reset(nullptr);
-        op.udp_send_ready.reset(nullptr);
+        op.udp_send_ready = std::make_unique<rt::Semaphore>(0);
 
         // The master node broadcasts while the followers block.
         uint64_t bcast_tsc = rdtsc();

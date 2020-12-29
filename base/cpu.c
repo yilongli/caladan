@@ -13,6 +13,7 @@
 #include <base/sysfs.h>
 #include <base/bitmap.h>
 #include <base/init.h>
+#include <base/timetrace.h>
 
 #include "init_internal.h"
 
@@ -103,6 +104,10 @@ int cpu_init(void)
 	int ret = cpu_scan_topology();
 	if (ret)
 		return ret;
+
+	ret = tt_init();
+	if (ret)
+	    return ret;
 
 	log_info("cpu: detected %d cores, %d nodes", cpu_count, numa_count);
 	return 0;
