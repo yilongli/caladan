@@ -347,6 +347,7 @@ extern bool cfg_gc_enabled;
 enum {
 	/* scheduler counters */
 	STAT_RESCHEDULES = 0,
+	STAT_IDLE_CYCLES,
 	STAT_SCHED_CYCLES,
 	STAT_SOFTIRQ_CYCLES,
 	STAT_PROGRAM_CYCLES,

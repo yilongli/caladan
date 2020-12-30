@@ -368,7 +368,6 @@ bool
 udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
 {
     tt_record("udp_shuffle: invoked");
-    rt::Yield();
 
     if (opts.policy != ShufflePolicy::LRPT) {
         log_err("only LRPT policy is implemented");

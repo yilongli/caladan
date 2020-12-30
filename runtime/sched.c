@@ -316,8 +316,9 @@ static __noreturn __noinline void schedule(void)
 	start_tsc = rdtsc();
 	STAT(PROGRAM_CYCLES) += start_tsc - last_tsc;
 	tt_record4_tsc(l->curr_cpu, start_tsc, "sched: enter schedule, "
-            "prog_cyc %u, sched_cyc %u, softirq_cyc %u",
-            STAT(PROGRAM_CYCLES), STAT(SCHED_CYCLES), STAT(SOFTIRQ_CYCLES), 0);
+            "prog_cyc %u (softirq_cyc %u), sched_cyc %u, idle_cyc %u",
+            STAT(PROGRAM_CYCLES), STAT(SOFTIRQ_CYCLES), STAT(SCHED_CYCLES),
+            STAT(IDLE_CYCLES));
 
 	/* increment the RCU generation number (even is in scheduler) */
 	store_release(&l->rcu_gen, l->rcu_gen + 1);
@@ -428,11 +429,12 @@ done:
 
 	/* update exit stat counters */
 	end_tsc = rdtsc();
-	STAT(SCHED_CYCLES) += end_tsc - start_tsc;
+    STAT(SCHED_CYCLES) += end_tsc - start_tsc;
     if (idle_tsc) {
+        STAT(IDLE_CYCLES) += end_tsc - idle_tsc;
         tt_record4_tsc(l->curr_cpu, end_tsc, "sched: finally got work, "
                 "prog_cyc %u, sched_cyc %u, idle_cyc %u", STAT(PROGRAM_CYCLES),
-                STAT(SCHED_CYCLES), end_tsc - idle_tsc, 0);
+                STAT(SCHED_CYCLES), STAT(IDLE_CYCLES), 0);
     }
 	last_tsc = end_tsc;
 	if (cores_have_affinity(th->last_cpu, l->curr_cpu))
