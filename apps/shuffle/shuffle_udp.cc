@@ -2,6 +2,7 @@
 
 extern "C" {
 #include <base/log.h>
+#include <base/cpu.h>
 #include <net/ip.h>
 #include <runtime/smalloc.h>
 #include <runtime/timetrace.h>
@@ -26,6 +27,16 @@ namespace {
         return tt_record4_np(format, arg0, arg1, arg2, arg3);
     }
 }
+
+#define timestamp_create(x) \
+    uint64_t timestamp_get(x) = rdtsc()
+#define timestamp_get(x) _timestamp_##x
+
+DEFINE_PERCPU_METRIC(grpt_msg_cycles);
+DEFINE_PERCPU_METRIC(tx_data_cycles);
+DEFINE_PERCPU_METRIC(tx_ack_cycles);
+DEFINE_PERCPU_METRIC(handle_ack_cycles);
+DEFINE_PERCPU_METRIC(handle_data_cycles);
 
 /// Maximum number of bytes that can fit in a UDP-based shuffle message.
 static const size_t MAX_PAYLOAD = UDP_MAX_PAYLOAD - sizeof(udp_shuffle_msg_hdr);
@@ -124,7 +135,7 @@ struct udp_in_msg {
 void
 udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
 {
-    uint64_t start_tsc, idle_cyc;
+    uint64_t start_tsc, idle_cyc, now;
 
     start_tsc = rdtsc();
     idle_cyc = ustats_get_counter(USTAT_UDP_BLOCK_CYCLES);
@@ -162,12 +173,15 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
                     msg_hdr.op_id, msg_hdr.ack_no);
             continue;
         }
+
+        timestamp_create(handle_start);
+        now = timestamp_get(handle_start);
         if (msg_hdr.ack_no > 0) {
             // ACK message.
             tt_record("node-%d: received ACK %u from node-%d", c.local_rank,
                     msg_hdr.ack_no, peer);
             auto& tx_msg = tx_msgs[peer];
-            tx_msg.last_ack_tsc = rdtsc();
+            tx_msg.last_ack_tsc = now;
             if (msg_hdr.ack_no >= tx_msg.num_pkts) {
                 acked_msgs++;
             }
@@ -176,6 +190,9 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
                 tx_msg.send_wnd_start = msg_hdr.ack_no;
                 op.udp_send_ready->Up();
             }
+
+            percpu_metric_get(handle_ack_cycles) +=
+                    rdtsc() - timestamp_get(handle_start);
         } else {
             // Normal data segment.
             tt_record("node-%d: receiving bytes %lu-%lu from node-%d",
@@ -221,6 +238,10 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
                         c.local_rank, peer);
             }
 
+            timestamp_create(ack_start);
+            percpu_metric_get(handle_data_cycles) +=
+                    timestamp_get(ack_start) - timestamp_get(handle_start);
+
             // Send back an ACK.
             udp_shuffle_msg_hdr ack_hdr;
             ack_hdr.op_id = op.id;
@@ -229,6 +250,8 @@ udp_rx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
             tt_record("node-%d: sending ACK %u to node-%d", c.local_rank,
                     ack_hdr.ack_no, peer);
             udp_sock->WriteTo(&ack_hdr, sizeof(ack_hdr), &raddr);
+            percpu_metric_get(tx_ack_cycles) +=
+                    rdtsc() - timestamp_get(ack_start);
         }
     }
 
@@ -288,8 +311,9 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
     // rare (shouldn't happen in our experiment?); 2. timeout can be delegated
     // to Homa in a real impl.?).
     while (!list_empty(&send_queue)) {
-        // FIXME: better impl. to avoid scanning the entire send queue?
+        timestamp_create(search_start);
 
+        // FIXME: better impl. to avoid scanning the entire send queue?
         // Search for the message which has the maximum number of packets left
         // and not reached its send limit.
         udp_out_msg* next_msg = nullptr;
@@ -314,6 +338,10 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
             idle_cyc += rdtsc() - now;
             continue;
         }
+
+        timestamp_create(search_fin);
+        percpu_metric_get(grpt_msg_cycles) +=
+                timestamp_get(search_fin) - timestamp_get(search_start);
 
         // Prepare the shuffle message header and payload.
         int peer = next_msg->peer;
@@ -349,6 +377,10 @@ udp_tx_main(Cluster& c, shuffle_op& op, uint16_t udp_port, udp_out_msg* tx_msgs)
                     c.local_rank, peer);
         }
 
+        timestamp_create(send_fin);
+        percpu_metric_get(tx_data_cycles) +=
+                timestamp_get(send_fin) - timestamp_get(search_fin);
+
         // Implement packet pacing to avoid pushing too many packets to the
         // network layer.
         uint32_t drain_us =
@@ -368,6 +400,14 @@ bool
 udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
 {
     tt_record("udp_shuffle: invoked");
+
+    for (int cpu = 0; cpu < cpu_count; cpu++) {
+        percpu_metric_get_remote(grpt_msg_cycles, cpu) = 0;
+        percpu_metric_get_remote(tx_data_cycles, cpu) = 0;
+        percpu_metric_get_remote(tx_ack_cycles, cpu) = 0;
+        percpu_metric_get_remote(handle_ack_cycles, cpu) = 0;
+        percpu_metric_get_remote(handle_data_cycles, cpu) = 0;
+    }
 
     if (opts.policy != ShufflePolicy::LRPT) {
         log_err("only LRPT policy is implemented");
@@ -405,6 +445,23 @@ udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
     // And wait for the receive thread to finish.
     rx_main.Join();
     tt_record("udp_shuffle: join RX thread");
+
+    // Print app-specific per-cpu stat counters to time trace.
+    uint64_t m0, m1, m2;
+    for (int cpu = 0; cpu < cpu_count; cpu++) {
+        m0 = percpu_metric_get_remote(grpt_msg_cycles, cpu);
+        m1 = percpu_metric_get_remote(tx_data_cycles, cpu);
+        if (m0 || m1)
+            tt_record("cpu %02d, grpt_msg_cycles %u, tx_data_cycles %u", cpu,
+                    m0, m1);
+
+        m0 = percpu_metric_get_remote(tx_ack_cycles, cpu);
+        m1 = percpu_metric_get_remote(handle_ack_cycles, cpu);
+        m2 = percpu_metric_get_remote(handle_data_cycles, cpu);
+        if (m0 || m1)
+            tt_record("cpu %02d, tx_ack_cycles %u, handle_ack_cycles %u, "
+                      "handle_data_cycles %u", cpu, m0, m1, m2);
+    }
 
     sfree(out_msgs);
     return true;
