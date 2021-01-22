@@ -134,16 +134,31 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         op.in_bufs.resize(cluster->num_nodes);
         op.next_inmsg_addr = op.rx_data.get();
         op.acked_out_msgs.reset(nullptr);
-        op.udp_send_ready = std::make_unique<rt::Semaphore>(0);
+
+        // TODO
+        if (!opts.tcp_protocol)
+            udp_shuffle_init(opts, *cluster, op);
+
+        // The master node will wait until all nodes are ready.
+        if (is_master) {
+            char ready_msg[5];
+            for (auto& c : cluster->control_socks) {
+                c->ReadFull(ready_msg, 5);
+                assert(strncmp(ready_msg, "READY", 5) == 0);
+            }
+        } else {
+            cluster->control_socks[0]->WriteFull("READY", 5);
+        }
 
         // The master node broadcasts while the followers block.
-        uint64_t bcast_tsc = rdtsc();
+        uint64_t bcast_tsc = 0;
         if (!is_master) {
             cluster->control_socks[0]->ReadFull(ctrl_msg, 2);
             assert(strncmp(ctrl_msg, "GO", 2) == 0);
         } else {
             // Create a small gap in the iokernel timetrace to separate runs.
             rt::Delay(10);
+            bcast_tsc = rdtsc();
             for (auto& c : cluster->control_socks) {
                 c->WriteFull("GO", 2);
             }
@@ -158,8 +173,9 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         }
         elapsed_tsc = rdtsc() - elapsed_tsc;
         double elapsed_us = elapsed_tsc * 1.0 / cycles_per_us;
-        double rx_speed = op.total_rx_bytes / (125.0 * elapsed_us);
-        double tx_speed = op.total_tx_bytes / (125.0 * elapsed_us);
+        double loc_bytes = op.out_bufs[cluster->local_rank].len;
+        double rx_speed = (op.total_rx_bytes - loc_bytes) / (125.0*elapsed_us);
+        double tx_speed = (op.total_tx_bytes - loc_bytes) / (125.0*elapsed_us);
         tt_record4_np("shuffle op %u completed in %u us (%u/%u Mbps)",
                 run, elapsed_us, rx_speed * 1000, tx_speed * 1000);
 
@@ -364,6 +380,7 @@ sig_handler(int signum)
 int main(int argc, char* argv[]) {
     signal(SIGINT, sig_handler);
     signal(SIGTERM, sig_handler);
+    signal(SIGSEGV, sig_handler);
     if (((argc >= 2) && (strcmp(argv[1], "--help") == 0)) || (argc == 1)) {
         print_help(argv[0]);
         return 0;

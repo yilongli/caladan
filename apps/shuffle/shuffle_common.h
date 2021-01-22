@@ -45,7 +45,7 @@ struct shuffle_op {
         , rx_data()
         , next_inmsg_addr()
         , acked_out_msgs()
-        , udp_send_ready()
+        , udp_shfl_obj()
     {}
 
     /// Identifier of this operation.
@@ -85,8 +85,6 @@ struct shuffle_op {
     /// can be initiated.
     std::unique_ptr<rt::Semaphore> acked_out_msgs;
 
-    /// Semaphore used to park the TX thread in UDP shuffle when all bytes in
-    /// the sliding windows of the outbound messages have been transmitted
-    /// (it can be woken up by the RX thread later when ACKs arrive).
-    std::unique_ptr<rt::Semaphore> udp_send_ready;
+    /// Keep track the progress of a UDP-based shuffle operation.
+    void* udp_shfl_obj;
 };

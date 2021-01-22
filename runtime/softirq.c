@@ -30,6 +30,14 @@ static void softirq_fn(void *arg)
 	start_tsc = rdtsc();
 	tt_record4_tsc(cpu_id, start_tsc, "softirq_fn: invoked", 0, 0, 0, 0);
 
+	/* deliver new RX packets to the runtime */
+	net_rx_softirq(w->recv_reqs, w->recv_cnt);
+
+#ifdef DIRECTPATH
+	net_rx_softirq_direct(w->direct_reqs, w->direct_rx_cnt);
+#endif
+    tt_record4_tsc(cpu_id, rdtsc(), "softirq_fn: net_rx done", 0, 0, 0, 0);
+
 	/* complete TX requests and free packets */
 	for (i = 0; i < w->compl_cnt; i++)
 		mbuf_free(w->compl_reqs[i]);
@@ -39,37 +47,39 @@ static void softirq_fn(void *arg)
 		thread_ready(w->storage_threads[i]);
 #endif
 
-	/* deliver new RX packets to the runtime */
-	net_rx_softirq(w->recv_reqs, w->recv_cnt);
-
-#ifdef DIRECTPATH
-	net_rx_softirq_direct(w->direct_reqs, w->direct_rx_cnt);
-#endif
-
 	/* handle any pending timeouts */
 	if (timer_needed(w->k))
 		timer_softirq(w->k, w->timer_budget);
 
 	end_tsc = rdtsc();
     STAT(SOFTIRQ_CYCLES) += end_tsc - start_tsc;
-    tt_record4_tsc(cpu_id, end_tsc, "softirq_fn: finished", 0, 0, 0, 0);
+    tt_record4_tsc(cpu_id, end_tsc, "softirq_fn: finished, compl_cnt %u, "
+            "recv_cnt %u", w->compl_cnt, w->recv_cnt, 0, 0);
 }
 
 static void softirq_gather_work(struct softirq_work *w, struct kthread *k,
 				unsigned int budget)
 {
 	unsigned int recv_cnt = 0, compl_cnt = 0, real_budget;
+	uint64_t queued_tsc;
 
 	assert_spin_lock_held(&k->lock);
 
 	real_budget = MIN(budget, SOFTIRQ_MAX_BUDGET);
 
+    queued_tsc = 0;
 	while (!preempt_cede_needed()) {
 		uint64_t cmd;
-		unsigned long payload;
+        unsigned long payload;
 
+#if 1
+        uint64_t timestamp;
+		if (!lrpc_recv_time(&k->rxq, &cmd, &timestamp, &payload))
+			break;
+#else
 		if (!lrpc_recv(&k->rxq, &cmd, &payload))
 			break;
+#endif
 
 		switch (cmd) {
 		case RX_NET_RECV:
@@ -79,6 +89,11 @@ static void softirq_gather_work(struct softirq_work *w, struct kthread *k,
 					      MBUF_DEFAULT_LEN);
 			BUG_ON(w->recv_reqs[recv_cnt] == NULL);
 			recv_cnt++;
+            if (!queued_tsc) {
+                queued_tsc = timestamp;
+                tt_record1(myk()->curr_cpu, "softirq_gather: oldest packet "
+                        "delayed %u cyc", rdtsc() - queued_tsc);
+            }
 			break;
 
 		case RX_NET_COMPLETE:

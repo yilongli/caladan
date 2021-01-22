@@ -252,7 +252,7 @@ void ias_bw_poll(void)
 int ias_bw_init(void)
 {
 	int ret;
-	unsigned int nr_channels;
+	unsigned int nr_channels, retries;
 
 	if (cfg.nobw)
 		return 0;
@@ -262,7 +262,13 @@ int ias_bw_init(void)
 		return ret;
 
 	/* We monitor 1 channel, so multiply measurements by nr_channels to estimate real bw */
-	nr_channels = pcm_caladan_get_active_channel_count();
+	nr_channels = 0;
+	retries = 0;
+	while (!nr_channels && (retries++ < 5)) {
+        nr_channels = pcm_caladan_get_active_channel_count();
+        if (!nr_channels)
+            log_warn("ias_bw: no active channel detected; try again...");
+	}
 	if (nr_channels == 0)
 		return -EINVAL;
 

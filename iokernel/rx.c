@@ -63,6 +63,16 @@ bool rx_send_to_runtime(struct proc *p, uint32_t hash, uint64_t cmd,
 	if (likely(sched_threads_active(p) > 0)) {
 		/* use the flow table to route to an active thread */
 		th = &p->threads[p->flow_tbl[hash % p->thread_count]];
+#if 0
+		// ignore RSS and simply spray the packets
+		//th = &p->threads[p->flow_tbl[(p->next_thread_rr++) % p->thread_count]];
+		if (cmd == RX_NET_RECV) {
+		    struct rx_net_hdr *hdr = shmptr_to_ptr(&dp.ingress_mbuf_region,
+				payload, sizeof(*hdr));
+		    tt_record3(sched_dp_core, "rx: sending pkt to runtime core %u, "
+				"hash %u, len %u", th->core, hash, hdr->len);
+        }
+#endif
 		return lrpc_send(&th->rxq, cmd, payload);
 	}
 

@@ -338,6 +338,7 @@ static int net_tx_iokernel(struct mbuf *m)
 	struct kthread *k = myk();
 	unsigned int len = mbuf_length(m);
 	struct tx_net_hdr *hdr;
+	int ret;
 
 	assert_preempt_disabled();
 
@@ -347,12 +348,15 @@ static int net_tx_iokernel(struct mbuf *m)
 	hdr->olflags = m->txflags;
 	shmptr_t shm = ptr_to_shmptr(&netcfg.tx_region, hdr, len + sizeof(*hdr));
 
+	ret = -1;
 	if (unlikely(!lrpc_send(&k->txpktq, TXPKT_NET_XMIT, shm))) {
 		mbuf_pull_hdr(m, *hdr);
-		return -1;
+		goto done;
 	}
-
-	return 0;
+	ret = 0;
+done:
+    tt_record1(k->curr_cpu, "core: lrpc_send finished, ret %d", ret);
+	return ret;
 }
 
 static void net_tx_raw(struct mbuf *m)
@@ -368,8 +372,7 @@ static void net_tx_raw(struct mbuf *m)
 	STAT(TX_PACKETS)++;
 	STAT(TX_BYTES) += len;
 
-    tt_record2(k->curr_cpu, "net_tx_raw: about to send pkt, head %p, len %u",
-            (uint32_t) m->head, m->len);
+    tt_record1(k->curr_cpu, "net_tx_raw: about to send pkt, len %u", m->len);
 	if (unlikely(net_ops.tx_single(m))) {
 		mbufq_push_tail(&k->txpktq_overflow, m);
 		STAT(TXQ_OVERFLOW)++;

@@ -19,6 +19,7 @@ bool __lrpc_send(struct lrpc_chan_out *chan, uint64_t cmd,
                 return false;
 
 	dst = &chan->tbl[chan->send_head & (chan->size - 1)];
+	dst->timestamp = rdtsc();
 	dst->payload = payload;
 
 	cmd |= (chan->send_head++ & chan->size) ? 0 : LRPC_DONE_PARITY;

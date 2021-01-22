@@ -177,10 +177,12 @@ void dataplane_loop(void)
 
                 nb_tx = stats[TX_PULLED] - last_stats[TX_PULLED];
                 nb_rx = stats[RX_PULLED] - last_stats[RX_PULLED];
-                tt_record2(sched_dp_core, "main: tx pkts %u, cyc %u", nb_tx,
-                    tx_cyc/(nb_tx+1));
-                tt_record2(sched_dp_core, "main: rx pkts %u, cyc %u", nb_rx,
-                    rx_cyc/(nb_rx+1));
+                nb_tx = nb_tx ? nb_tx : 1;
+                nb_rx = nb_rx ? nb_rx : 1;
+                tt_record2(sched_dp_core, "main: tx pkts %u, %u cyc/pkt", nb_tx,
+                        tx_cyc / nb_tx);
+                tt_record2(sched_dp_core, "main: rx pkts %u, %u cyc/pkt", nb_rx,
+                        rx_cyc / nb_rx);
                 busy_cyc = idle_cyc = rx_cyc = tx_cyc = 0;
                 last_stats[TX_PULLED] = stats[TX_PULLED];
                 last_stats[RX_PULLED] = stats[RX_PULLED];

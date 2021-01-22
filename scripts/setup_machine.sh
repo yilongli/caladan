@@ -22,6 +22,9 @@ for n in /sys/devices/system/node/node[2-9]; do
 	echo 0 > $n/hugepages/hugepages-2048kB/nr_hugepages
 done
 
+# optimize for deterministic performance at the cost of increased power consumption
+tuned-adm profile network-latency
+
 # load msr module
 modprobe msr
 

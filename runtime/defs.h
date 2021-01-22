@@ -35,8 +35,13 @@
 #define RUNTIME_STACK_SIZE		256 * KB
 #define RUNTIME_GUARD_SIZE		256 * KB
 #define RUNTIME_RQ_SIZE			32
-#define RUNTIME_SOFTIRQ_LOCAL_BUDGET	16
-#define RUNTIME_SOFTIRQ_REMOTE_BUDGET	16
+// FIXME: these values actually only decide the maximum number of RX_NET_RECV
+// events to collect within @softirq_gather_work (and not other events); the old
+// values are so large that remote threads can hardly steal any softirq events
+#define RUNTIME_SOFTIRQ_LOCAL_BUDGET	4
+#define RUNTIME_SOFTIRQ_REMOTE_BUDGET	4
+//#define RUNTIME_SOFTIRQ_LOCAL_BUDGET	16
+//#define RUNTIME_SOFTIRQ_REMOTE_BUDGET	16
 #define RUNTIME_MAX_TIMERS		4096
 #define RUNTIME_SCHED_POLL_ITERS	0
 #define RUNTIME_SCHED_MIN_POLL_US	2
@@ -429,7 +434,11 @@ struct kthread {
 	struct direct_txq		*directpath_txq;
 	unsigned long		pad4[6];
 
-	/* 11th cache-line, statistics counters */
+	/* 11-12th cache-line */
+	uint64_t            disable_ws_tsc;
+	unsigned long       pad5[15];
+
+	/* 13th cache-line, statistics counters */
 	uint64_t		stats[STAT_NR];
 };
 
@@ -441,6 +450,7 @@ BUILD_ASSERT(offsetof(struct kthread, rq) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(struct kthread, timer_lock) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(struct kthread, storage_q) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(struct kthread, directpath_rxq) % CACHE_LINE_SIZE == 0);
+BUILD_ASSERT(offsetof(struct kthread, disable_ws_tsc) % CACHE_LINE_SIZE == 0);
 BUILD_ASSERT(offsetof(struct kthread, stats) % CACHE_LINE_SIZE == 0);
 
 extern __thread struct kthread *mykthread;

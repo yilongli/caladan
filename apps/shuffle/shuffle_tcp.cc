@@ -248,11 +248,13 @@ tcp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
     }
 
     // Copy the message destined to itself directly.
+#if 0
     int self = c.local_rank;
     op.in_bufs[self].addr = op.next_inmsg_addr.fetch_add(op.out_bufs[self].len);
     op.in_bufs[self].len = op.out_bufs[self].len;
     memcpy(op.in_bufs[self].addr, op.out_bufs[self].addr, op.in_bufs[self].len);
-    
+#endif
+
     // Spin up a thread to handle the receive-side logic of shuffle; the rest of
     // this method will handle the send-side logic.
     rt::Thread rx_main([&] {

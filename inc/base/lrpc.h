@@ -8,12 +8,14 @@
 
 #pragma once
 
+#include <asm/ops.h>
 #include <base/stddef.h>
 #include <base/assert.h>
 #include <base/atomic.h>
 
 struct lrpc_msg {
 	uint64_t	cmd;
+	uint64_t    timestamp;
 	unsigned long	payload;
 };
 
@@ -58,6 +60,7 @@ static inline bool lrpc_send(struct lrpc_chan_out *chan, uint64_t cmd,
 	dst = &chan->tbl[chan->send_head & (chan->size - 1)];
 	cmd |= (chan->send_head++ & chan->size) ? 0 : LRPC_DONE_PARITY;
 	dst->payload = payload;
+	dst->timestamp = rdtsc();
 	store_release(&dst->cmd, cmd);
 	return true;
 }
@@ -118,6 +121,35 @@ struct lrpc_chan_in {
 	uint32_t	size;
 };
 
+// FIXME: keep only one lrpc_recv* routine?
+/**
+ * lrpc_recv_time - receives a message and its timestamp on the channel
+ * @chan: the ingress channel
+ * @cmd_out: a pointer to store the received command
+ * @tsc_out: a pointer to store the timestamp
+ * @payload_out: a pointer to store the received payload
+ *
+ * Returns true if successful, otherwise the channel is empty.
+ */
+static inline bool lrpc_recv_time(struct lrpc_chan_in *chan, uint64_t *cmd_out,
+			     uint64_t *tsc_out, unsigned long *payload_out)
+{
+    struct lrpc_msg *m = &chan->tbl[chan->recv_head & (chan->size - 1)];
+    uint64_t parity = (chan->recv_head & chan->size) ? 0 : LRPC_DONE_PARITY;
+	uint64_t cmd;
+
+	cmd = load_acquire(&m->cmd);
+        if ((cmd & LRPC_DONE_PARITY) != parity)
+		return false;
+	chan->recv_head++;
+
+	*cmd_out = cmd & LRPC_CMD_MASK;
+	*tsc_out = m->timestamp;
+	*payload_out = m->payload;
+	store_release(chan->recv_head_wb, chan->recv_head);
+	return true;
+}
+
 /**
  * lrpc_recv - receives a message on the channel
  * @chan: the ingress channel
@@ -129,20 +161,8 @@ struct lrpc_chan_in {
 static inline bool lrpc_recv(struct lrpc_chan_in *chan, uint64_t *cmd_out,
 			     unsigned long *payload_out)
 {
-        struct lrpc_msg *m = &chan->tbl[chan->recv_head & (chan->size - 1)];
-        uint64_t parity = (chan->recv_head & chan->size) ?
-			  0 : LRPC_DONE_PARITY;
-	uint64_t cmd;
-
-	cmd = load_acquire(&m->cmd);
-        if ((cmd & LRPC_DONE_PARITY) != parity)
-		return false;
-	chan->recv_head++;
-
-	*cmd_out = cmd & LRPC_CMD_MASK;
-	*payload_out = m->payload;
-	store_release(chan->recv_head_wb, chan->recv_head);
-	return true;
+    uint64_t tsc;
+    return lrpc_recv_time(chan, cmd_out, &tsc, payload_out);
 }
 
 /**

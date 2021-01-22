@@ -77,12 +77,36 @@ struct tt_buffer {
 extern int    tt_init();
 extern void   tt_freeze(void);
 extern int    tt_dump(FILE *output);
-extern void   tt_record_buf(struct tt_buffer* buffer, uint64_t timestamp,
-		const char* format, uint32_t arg0, uint32_t arg1,
-		uint32_t arg2, uint32_t arg3);
 
-/* exposed here so tt_recordN() can be inlined */
+/* exposed here so tt_record*() can be inlined */
 extern struct tt_buffer *tt_buffers[NCPU];
+extern unsigned int tt_frozen;
+
+/**
+ * tt_record_buf(): record an event in a specific tt_buffer.
+ */
+static inline void tt_record_buf(struct tt_buffer *buffer, uint64_t timestamp,
+        const char* format, uint32_t arg0, uint32_t arg1, uint32_t arg2,
+        uint32_t arg3)
+{
+#if ENABLE_TIME_TRACE
+    struct tt_event *event;
+    if (unlikely(load_acquire(&tt_frozen)))
+        return;
+
+    store_release(&buffer->changing, 1);
+    event = &buffer->events[buffer->next_index];
+    buffer->next_index = (buffer->next_index + 1) & (TT_BUF_SIZE-1);
+
+    event->timestamp = timestamp;
+    event->format = format;
+    event->arg0 = arg0;
+    event->arg1 = arg1;
+    event->arg2 = arg2;
+    event->arg3 = arg3;
+    store_release(&buffer->changing, 0);
+#endif
+}
 
 /**
  * tt_recordN(): record an event, along with N parameters.
@@ -105,41 +129,33 @@ extern struct tt_buffer *tt_buffers[NCPU];
  * @arg2       Argument to use when printing a message about this event.
  * @arg3       Argument to use when printing a message about this event.
  */
-static inline uint64_t tt_record4(unsigned cpu_id, const char* format,
+static inline void tt_record4(unsigned cpu_id, const char* format,
         uint32_t arg0, uint32_t arg1, uint32_t arg2, uint32_t arg3)
 {
-    uint64_t now = 0;
-#if ENABLE_TIME_TRACE
-    now = rdtsc();
-	tt_record_buf(tt_buffers[cpu_id], now, format, arg0, arg1, arg2, arg3);
-#endif
-	return now;
+	tt_record_buf(tt_buffers[cpu_id], rdtsc(), format, arg0, arg1, arg2, arg3);
 }
-static inline uint64_t tt_record4_tsc(unsigned cpu_id, uint64_t tsc,
+static inline void tt_record4_tsc(unsigned cpu_id, uint64_t tsc,
         const char* format, uint32_t arg0, uint32_t arg1, uint32_t arg2,
         uint32_t arg3)
 {
-#if ENABLE_TIME_TRACE
 	tt_record_buf(tt_buffers[cpu_id], tsc, format, arg0, arg1, arg2, arg3);
-#endif
-	return tsc;
 }
-static inline uint64_t tt_record3(unsigned cpu_id, const char* format,
+static inline void tt_record3(unsigned cpu_id, const char* format,
         uint32_t arg0, uint32_t arg1, uint32_t arg2)
 {
-    return tt_record4(cpu_id, format, arg0, arg1, arg2, 0);
+    tt_record4(cpu_id, format, arg0, arg1, arg2, 0);
 }
-static inline uint64_t tt_record2(unsigned cpu_id, const char* format,
+static inline void tt_record2(unsigned cpu_id, const char* format,
         uint32_t arg0, uint32_t arg1)
 {
-    return tt_record4(cpu_id, format, arg0, arg1, 0, 0);
+    tt_record4(cpu_id, format, arg0, arg1, 0, 0);
 }
-static inline uint64_t tt_record1(unsigned cpu_id, const char* format,
+static inline void tt_record1(unsigned cpu_id, const char* format,
         uint32_t arg0)
 {
-    return tt_record4(cpu_id, format, arg0, 0, 0, 0);
+    tt_record4(cpu_id, format, arg0, 0, 0, 0);
 }
-static inline uint64_t tt_record0(unsigned cpu_id, const char* format)
+static inline void tt_record0(unsigned cpu_id, const char* format)
 {
-    return tt_record4(cpu_id, format, 0, 0, 0, 0);
+    tt_record4(cpu_id, format, 0, 0, 0, 0);
 }

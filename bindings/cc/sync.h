@@ -64,10 +64,18 @@ template<typename L> class ScopedLock {
   explicit ScopedLock(L *lock) : lock_(lock) {
     lock_->Lock();
   }
-  ~ScopedLock() { lock_->Unlock(); }
+  explicit ScopedLock() : lock_(nullptr) {}
+  ~ScopedLock() { if (lock_) lock_->Unlock(); }
+  void construct(L *lock, bool locked)
+  {
+      assert(lock_ == nullptr);
+      if (lock_) return;
+      lock_ = lock;
+      if (!locked) lock_->Lock();
+  }
 
  private:
-  L *const lock_;
+  L *lock_;
 
   ScopedLock(const ScopedLock&) = delete;
   ScopedLock& operator=(const ScopedLock&) = delete;

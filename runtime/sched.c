@@ -185,8 +185,49 @@ static void update_oldest_tsc(struct kthread *k)
 	}
 }
 
+static bool steal_softirq_work(struct kthread *l, struct kthread *r)
+{
+    thread_t *th;
+    unsigned int r_cpu;
+    uint64_t start_tsc, expired_tsc;
+
+	assert_spin_lock_held(&l->lock);
+	assert(l->rq_head == 0 && l->rq_tail == 0);
+
+    start_tsc = rdtsc();
+    expired_tsc = ACCESS_ONCE(r->disable_ws_tsc);
+    if (start_tsc < expired_tsc)
+        return false;
+    if (lrpc_empty(&r->rxq))
+        return false;
+    if (!spin_try_lock(&r->lock))
+        return false;
+
+    th = softirq_run_thread(r, RUNTIME_SOFTIRQ_REMOTE_BUDGET);
+    r_cpu = r->curr_cpu;
+    spin_unlock(&r->lock);
+    if (th)
+        STAT(SOFTIRQS_STOLEN)++;
+    else
+        return false;
+
+    l->rq[l->rq_head++ % RUNTIME_RQ_SIZE] = th;
+    ACCESS_ONCE(l->q_ptrs->oldest_tsc) = th->ready_tsc;
+    ACCESS_ONCE(l->q_ptrs->rq_head)++;
+    STAT(THREADS_STOLEN)++;
+    tt_record2(l->curr_cpu, "sched: stole a softirq task from cpu %u, "
+            "disable_ws expired %u cyc", r_cpu, start_tsc - expired_tsc);
+
+    return true;
+}
+
 static bool steal_work(struct kthread *l, struct kthread *r)
 {
+#if 1
+    // FIXME: hack to only steal softirq tasks
+    return steal_softirq_work(l, r);
+#endif
+
 	thread_t *th;
 	uint32_t i, avail, rq_tail, overflow = 0;
 
@@ -239,6 +280,8 @@ static bool steal_work(struct kthread *l, struct kthread *r)
 		update_oldest_tsc(l);
 		ACCESS_ONCE(l->q_ptrs->rq_head) += avail + overflow;
 		STAT(THREADS_STOLEN) += avail + overflow;
+		tt_record2(l->curr_cpu, "sched: stole %u runqueue tasks from cpu %u",
+		        avail + overflow, r->curr_cpu);
 		return true;
 	}
 
@@ -265,6 +308,8 @@ done:
 		ACCESS_ONCE(l->q_ptrs->oldest_tsc) = th->ready_tsc;
 		ACCESS_ONCE(l->q_ptrs->rq_head)++;
 		STAT(THREADS_STOLEN)++;
+		tt_record1(l->curr_cpu, "sched: stole an overflow/softirq task from "
+                "cpu %u", r->curr_cpu);
 	}
 
 	return th != NULL;
@@ -290,7 +335,7 @@ static __noinline struct thread *do_watchdog(struct kthread *l)
 static __noreturn __noinline void schedule(void)
 {
 	struct kthread *r = NULL, *l = myk();
-	uint64_t start_tsc, end_tsc, idle_tsc = 0, park_tsc;
+	uint64_t start_tsc, end_tsc, idle_tsc = 0, park_tsc, now;
 	thread_t *th = NULL;
 	unsigned int start_idx;
 	unsigned int iters = 0;
@@ -354,6 +399,21 @@ static __noreturn __noinline void schedule(void)
 again:
 	/* then check for local softirqs */
 	th = softirq_run_thread(l, RUNTIME_SOFTIRQ_LOCAL_BUDGET);
+	now = rdtsc();
+	if (th && !lrpc_empty(&l->rxq)) {
+		if (now < l->disable_ws_tsc) {
+			ACCESS_ONCE(l->disable_ws_tsc) = 0;
+			tt_record0(l->curr_cpu, "enabled work-stealing");
+		}
+	} else {
+		if (now > l->disable_ws_tsc)
+			tt_record0(l->curr_cpu, "disabled work-stealing");
+        ACCESS_ONCE(l->disable_ws_tsc) = now + cycles_per_us;
+//		if (now + cycles_per_us > l->disable_ws_tsc) {
+//			// FIXME: how long should we expire the protection from other cpus?
+//			ACCESS_ONCE(l->disable_ws_tsc) = now + cycles_per_us * 2;
+//		}
+	}
 	if (th) {
 		STAT(SOFTIRQS_LOCAL)++;
 		goto done;
@@ -484,6 +544,10 @@ static __always_inline void enter_schedule(thread_t *myth)
 	/* fast path: switch directly to the next uthread */
 	STAT(PROGRAM_CYCLES) += now - last_tsc;
 	last_tsc = now;
+	tt_record4_tsc(k->curr_cpu, now, "sched: switch to next uthread, "
+            "prog_cyc %u (softirq_cyc %u), sched_cyc %u, idle_cyc %u",
+            STAT(PROGRAM_CYCLES), STAT(SOFTIRQ_CYCLES), STAT(SCHED_CYCLES),
+            STAT(IDLE_CYCLES));
 
 	/* pop the next runnable thread from the queue */
 	th = k->rq[k->rq_tail++ % RUNTIME_RQ_SIZE];
@@ -805,7 +869,8 @@ static void thread_finish_exit(void)
 	__self = NULL;
 
 	spin_lock(&myk()->lock);
-	schedule();
+//    tt_record0(myk()->curr_cpu, "sched: cleaned up finished uthread");
+    schedule();
 }
 
 /**
@@ -815,6 +880,7 @@ void thread_exit(void)
 {
 	/* can't free the stack we're currently using, so switch */
 	preempt_disable();
+//	tt_record0(myk()->curr_cpu, "sched: uthread exiting");
 	jmp_runtime_nosave(thread_finish_exit);
 }
 

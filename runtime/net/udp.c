@@ -569,6 +569,8 @@ void udp_close(udpconn_t *c)
 struct udpspawner {
 	struct trans_entry	e;
 	udpspawn_fn_t		fn;
+	void                *app_state;
+	udpspawn_free_state_fn_t free_state_fn;
 
 	struct kref ref;
 	struct flow_registration flow;
@@ -603,6 +605,7 @@ static void udp_par_recv(struct trans_entry *e, struct mbuf *m)
 	d->raddr.ip = ntoh32(iphdr->saddr);
 	d->raddr.port = ntoh16(udphdr->src_port);
 	d->release_data = m;
+	d->app_state = s->app_state;
 	thread_ready(th);
 }
 
@@ -614,6 +617,8 @@ static const struct trans_ops udp_par_ops = {
 static void udp_release_spawner(struct rcu_head *h)
 {
 	udpspawner_t *s = container_of(h, udpspawner_t, e.rcu);
+	if (s->app_state)
+	    s->free_state_fn(s->app_state);
 	sfree(s);
 }
 
@@ -628,12 +633,15 @@ static void udp_release_spawner_ref(struct kref *ref)
  * udp_create_spawner - creates a UDP spawner for ingress datagrams
  * @laddr: the local address to bind to
  * @fn: a handler function for each datagram
+ * @app_state: a pointer to a piece of app-specific state which can be
+ * used by @fn
+ * @free_fn: a handler function to free @app_state
  * @s_out: if successful, set to a pointer to the spawner
  *
  * Returns 0 if successful, otherwise fail.
  */
-int udp_create_spawner(struct netaddr laddr, udpspawn_fn_t fn,
-		       udpspawner_t **s_out)
+int udp_create_spawner(struct netaddr laddr, udpspawn_fn_t fn, void *app_state,
+        udpspawn_free_state_fn_t free_fn, udpspawner_t **s_out)
 {
 	udpspawner_t *s;
 	int ret;
@@ -661,6 +669,8 @@ int udp_create_spawner(struct netaddr laddr, udpspawn_fn_t fn,
 	s->flow.e = &s->e;
 	s->flow.ref = &s->ref;
 	s->flow.release = udp_release_spawner_ref;
+	s->app_state = app_state;
+	s->free_state_fn = free_fn;
 	register_flow(&s->flow);
 
 	*s_out = s;

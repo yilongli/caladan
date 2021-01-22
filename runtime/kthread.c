@@ -59,6 +59,7 @@ static struct kthread *allock(void)
 	mbufq_init(&k->txpktq_overflow);
 	mbufq_init(&k->txcmdq_overflow);
 	spin_lock_init(&k->timer_lock);
+	k->disable_ws_tsc = ~0lu;
 	return k;
 }
 
