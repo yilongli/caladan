@@ -4,10 +4,8 @@ OP_ID=$1
 CLOCK_KHZ=$2
 
 shuffle_log="shuffle_op$OP_ID.log"
-egrep "op $((OP_ID-1)) completed in" logs/latest/rc01.log -A 2000 | \
-    grep "udp_shuffle: invoked" -A 2000 | \
-    egrep "op $OP_ID completed in" -B 2000 | \
-    ./ttmerge.py $CLOCK_KHZ > $shuffle_log
+sed -n "/op $((OP_ID-1)) completed in/,/op $((OP_ID)) completed in/p" logs/latest/rc01.log | \
+    sed -ne '/udp_shuffle: invoked/,$ p' | ./ttmerge.py $CLOCK_KHZ > $shuffle_log
 
 cpu_ids=$(grep -o "\[CPU.*\]" $shuffle_log | sort | uniq | grep -o "[0-9]*")
 IFS=$'\n'
@@ -19,6 +17,7 @@ prog_cyc=()
 app_cyc=()
 softirq_cyc=()
 softirq_net_rx_cyc=()
+softirq_run_thread_cyc=()
 prog_unknown_cyc=()
 
 tx_thread_cyc=()
@@ -89,6 +88,8 @@ for cpu_id in $cpu_ids; do
   softirq_net_rx_cyc+=( "$(egrep "softirq_fn: (invoked|net_rx done)" $tmp_log | \
       ./ttmerge.py $CLOCK_KHZ | grep "softirq_fn: net_rx done" | \
       grep -o "+ [0-9 .]* us" | awk -v sum=0 '{sum += $2} END {print sum}')" )
+  softirq_run_thread_cyc+=( "$(grep -o "softirq_run_thread_cyc [0-9]*" $cpu_log | \
+      awk -v khz=$CLOCK_KHZ '{if (x == 0) x = $2; y = $2} END {print (y-x)/khz}')" )
 
   # Similar to computing softirq_cyc directly from time trace, we can also do
   # the same for cycles spent on receiving DATA/ACK packets; this is useful to
@@ -101,7 +102,7 @@ for cpu_id in $cpu_ids; do
       ./ttmerge.py $CLOCK_KHZ | grep "node" -A 1 | grep "sched:" | \
       grep -o "+ [0-9 .]* us" | awk -v sum=0 '{sum += $2} END {print sum}')" )
 
-  # TODO: what other overhead? (softirq_gather is already counted in sched_cyc?)
+  # TODO: what other overhead? (maybe softirq_run() inside thread_yield()?)
   prog_unknown_cyc+=( "$(echo "${prog_cyc[-1]} ${app_cyc[-1]} ${softirq_cyc[-1]}" | \
       awk '{print $1-$2-$3}' )" )
 
@@ -156,6 +157,7 @@ handle_ack_cyc+=( "$(array_sum "${handle_ack_cyc[@]}")" )
 handle_data_cyc+=( "$(array_sum "${handle_data_cyc[@]}")" )
 softirq_cyc+=( "$(array_sum "${softirq_cyc[@]}")" )
 softirq_net_rx_cyc+=( "$(array_sum "${softirq_net_rx_cyc[@]}")" )
+softirq_run_thread_cyc+=( "$(array_sum "${softirq_run_thread_cyc[@]}")" )
 app_unknown_cyc+=( "$(array_sum "${app_unknown_cyc[@]}")" )
 prog_unknown_cyc+=( "$(array_sum "${prog_unknown_cyc[@]}")" )
 
@@ -171,8 +173,9 @@ printf "%s" '---------------'; for x in "${cpus[@]}"; do printf "%s" '--------';
 echo "op_id = $OP_ID"
 printf "               "; for x in "${cpus[@]}"; do printf "%8s" "CPU $x"; done; echo
 printf "total:         "; for x in "${total_cyc[@]}"; do printf "%8.2f" $x; done; echo
-printf "idle:          "; for x in "${idle_cyc[@]}"; do printf "%8.2f" $x; done; echo
 printf "sched:         "; for x in "${sched_cyc[@]}"; do printf "%8.2f" $x; done; echo
+printf "  idle:        "; for x in "${idle_cyc[@]}"; do printf "%8.2f" $x; done; echo
+printf "  softirq_rt:  "; for x in "${softirq_run_thread_cyc[@]}"; do printf "%8.2f" $x; done; echo
 printf "prog:          "; for x in "${prog_cyc[@]}"; do printf "%8.2f" $x; done; echo
 printf "  app:         "; for x in "${app_cyc[@]}"; do printf "%8.2f" $x; done; echo
 printf "    tx_thread: "; for x in "${tx_thread_cyc[@]}"; do printf "%8.2f" $x; done; echo
@@ -208,20 +211,21 @@ printf "tx_data:    "; print_numbers "%8.2f" "${tx_data_cyc[@]}"
 printf "  pkts:     "; print_numbers "%8.0f" "${tx_data_pkt[@]}"
 #for x in "${tx_data_pkt[@]}"; do printf "%8.0f" $x; done; echo
 printf "  cost_ns:  "; for i in "${!tx_data_pkt[@]}"; do \
-    printf "%8.0f" "$(echo "${tx_data_cyc[$i]} ${tx_data_pkt[$i]}" |  awk '{print $1/$2*1000}')"; done; echo
+    printf "%8.0f" "$(echo "${tx_data_cyc[$i]} ${tx_data_pkt[$i]}" | awk '{print ($2 > 0) ? $1/$2*1000 : 0}')"; done; echo
 #    printf "%8.0f"
 printf "tx_ack:     "; for x in "${tx_ack_cyc[@]}"; do printf "%8.2f" $x; done; echo
 printf "  pkts:     "; for x in "${tx_ack_pkt[@]}"; do printf "%8.0f" $x; done; echo
 printf "  cost_ns:  "; for i in "${!tx_ack_pkt[@]}"; do \
-    printf "%8.0f" "$(echo "${tx_ack_cyc[$i]} ${tx_ack_pkt[$i]}" |  awk '{print $1/$2*1000}')"; done; echo
+    printf "%8.0f" "$(echo "${tx_ack_cyc[$i]} ${tx_ack_pkt[$i]}" | awk '{print ($2 > 0) ? $1/$2*1000 : 0}')"; done; echo
 printf "rx_data:    "; for i in "${!rx_data_pkt[@]}"; do \
     printf "%8.2f" "$(echo "${rx_thread_data_cyc[$i]} ${tx_ack_cyc[$i]}" |  awk '{print $1-$2}')"; done; echo
 printf "  pkts:     "; for x in "${rx_data_pkt[@]}"; do printf "%8.f" $x; done; echo
 printf "  cost_ns:  "; for i in "${!rx_data_pkt[@]}"; do \
-    printf "%8.0f" "$(echo "${rx_thread_data_cyc[$i]} ${tx_ack_cyc[$i]} ${rx_data_pkt[$i]}" |  awk '{print ($1-$2)/$3*1000}')"; done; echo
+    printf "%8.0f" "$(echo "${rx_thread_data_cyc[$i]} ${tx_ack_cyc[$i]} ${rx_data_pkt[$i]}" |
+    awk '{print ($3 > 0) ? ($1-$2)/$3*1000 : 0}')"; done; echo
 printf "rx_ack:     "; for x in "${rx_thread_ack_cyc[@]}"; do printf "%8.2f" $x; done; echo
 printf "  pkts:     "; for x in "${rx_ack_pkt[@]}"; do printf "%8.0f" $x; done; echo
 printf "  cost_ns:  "; for i in "${!rx_ack_pkt[@]}"; do \
-    printf "%8.0f" "$(echo "${rx_thread_ack_cyc[$i]} ${rx_ack_pkt[$i]}" |  awk '{print $1/$2*1000}')"; done; echo
+    printf "%8.0f" "$(echo "${rx_thread_ack_cyc[$i]} ${rx_ack_pkt[$i]}" | awk '{print ($2 > 0) ? $1/$2*1000 : 0}')"; done; echo
 
 

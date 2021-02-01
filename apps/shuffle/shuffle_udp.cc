@@ -10,6 +10,7 @@ extern "C" {
 #include <runtime/ustats.h>
 }
 
+#include <deque>
 #include <memory>
 #include <random>
 #include <algorithm>
@@ -116,13 +117,9 @@ struct udp_out_msg {
     /// Total number of packets in this message.
     const size_t num_pkts;
 
-    /// Protects @send_wnd_start. Declared as an unique_ptr so that udp_out_msg
-    /// can be put inside a vector (rt::Mutex is not copy/move-constructible).
-    std::unique_ptr<rt::Mutex> send_wnd_mutex;
-
     /// Start index of the send window. This is the first packet in the message
     /// which has not been acknowledged by the receiver.
-    size_t send_wnd_start;
+    std::atomic<size_t> send_wnd_start;
 
     /// Index of the next packet to send.
     size_t next_send_pkt;
@@ -136,12 +133,16 @@ struct udp_out_msg {
     explicit udp_out_msg(int peer, size_t num_pkts)
         : peer(peer)
         , num_pkts(num_pkts)
-        , send_wnd_mutex(std::make_unique<rt::Mutex>())
         , send_wnd_start()
         , next_send_pkt()
         , last_ack_tsc()
         , sq_link()
     {}
+
+    /// Implements the LRPT policy.
+    bool operator<(const udp_out_msg& msg) const {
+        return (num_pkts - next_send_pkt) > (msg.num_pkts - msg.next_send_pkt);
+    }
 };
 
 /**
@@ -198,7 +199,7 @@ struct udp_shuffle_op {
 
     // Keeps track of the status of each outbound message; shared between
     // the TX and RX threads.
-    std::vector<udp_out_msg> tx_msgs;
+    std::deque<udp_out_msg> tx_msgs;
 
     std::vector<udp_in_msg> rx_msgs;
 
@@ -228,7 +229,6 @@ struct udp_shuffle_op {
         , send_ready(0)
         , shuffle_done(0)
     {
-        tx_msgs.reserve(c->num_nodes);
         size_t num_pkts;
         for (int i = 0; i < c->num_nodes; i++) {
             num_pkts = (i == c->local_rank) ? 0 :
@@ -283,11 +283,13 @@ static void rx_thread(struct udp_spawn_data *d)
                 op->shuffle_done.Up();
             }
         } else {
-            percpu_metric_scoped_cs(handle_ack_cycles, *tx_msg.send_wnd_mutex,
-                    start)
-            if (msg_hdr.ack_no > tx_msg.send_wnd_start) {
-                tx_msg.send_wnd_start = msg_hdr.ack_no;
-                op->send_ready.Up();
+            size_t expected = tx_msg.send_wnd_start.load();
+            while (msg_hdr.ack_no > expected) {
+                if (tx_msg.send_wnd_start.compare_exchange_strong(expected,
+                        msg_hdr.ack_no)) {
+                    op->send_ready.Up();
+                    break;
+                }
             }
         }
     } else {
@@ -389,6 +391,37 @@ static void rx_thread(struct udp_spawn_data *d)
     }
 }
 
+static void insert_lrpt(list_head *pq, udp_out_msg *start, udp_out_msg *new_msg)
+{
+    // If @start is not specified, set @start to be the head of the queue.
+    if (!start) {
+        start = list_top(pq, struct udp_out_msg, sq_link);
+        if (!start) {
+            list_add(pq, &new_msg->sq_link);
+            return;
+        }
+    }
+
+    // Optimization: if @new_msg is not smaller than the last entry, just
+    // insert it at the tail of the queue.
+    udp_out_msg* end = list_tail(pq, struct udp_out_msg, sq_link);
+    if (!(*new_msg < *end)) {
+        list_add_tail(pq, &new_msg->sq_link);
+        return;
+    }
+
+    // Otherwise, locate the first entry larger than @new_msg and insert
+    // @new_msg right before it.
+    while (true) {
+        BUG_ON(!start);
+        if (*new_msg < *start) {
+            list_add_before(&start->sq_link, &new_msg->sq_link);
+            return;
+        }
+        start = list_next(pq, start, sq_link);
+    }
+}
+
 /**
  * Main function of the TX thread that is responsible for scheduling outbound
  * messages, enforcing flow control (using a sliding window), and retransmitting
@@ -416,7 +449,7 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
     for (int i = 1; i < c.num_nodes; i++) {
         int peer = (c.local_rank + i) % c.num_nodes;
         op.tx_msgs[peer].last_ack_tsc = now;
-        list_add(&send_queue, &op.tx_msgs[peer].sq_link);
+        insert_lrpt(&send_queue, nullptr, &op.tx_msgs[peer]);
     }
 
     // FIXME: how to set the link speed properly???
@@ -433,25 +466,35 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
     // to Homa in a real impl.?).
     timestamp_create(search_start)
     while (!list_empty(&send_queue)) {
-        // FIXME: better impl. to avoid scanning the entire send queue?
-        // Search for the message which has the maximum number of packets left
-        // and not reached its send limit.
+        // Find the first message which hasn't filled up its send window;
+        // since @send_queue is ordered by LRPT, this is also the next message
+        // to send.
         udp_out_msg* next_msg = nullptr;
-        size_t max_pkts_left = 0;
+        udp_out_msg* right_nb = nullptr;
         udp_out_msg* msg;
         list_for_each(&send_queue, msg, sq_link) {
-            // Acquiring a mutex could move the current uthread to another cpu,
-            // in order to keep accurate per-cpu cycles, exclude the time inside
-            // rt::Mutex::Lock().
-            percpu_metric_scoped_cs(grpt_msg_cycles, *msg->send_wnd_mutex,
-                    search_start)
-            size_t send_wnd_start = msg->send_wnd_start;
+            size_t send_wnd_start = msg->send_wnd_start.load();
             assert(msg->next_send_pkt >= send_wnd_start);
-            size_t pkts_left = msg->num_pkts - msg->next_send_pkt;
             size_t unacked_pkts = msg->next_send_pkt - send_wnd_start;
-            if ((unacked_pkts < SEND_WND_SIZE) && (pkts_left > max_pkts_left)) {
+            if (unacked_pkts < SEND_WND_SIZE) {
                 next_msg = msg;
-                max_pkts_left = pkts_left;
+                right_nb = list_next(&send_queue, next_msg, sq_link);
+                list_del_from(&send_queue, &msg->sq_link);
+                break;
+            }
+        }
+
+        // Remove @next_msg if it's completed, or re-insert it into @send_queue
+        // while keeping the LRPT order.
+        size_t bytes_sent = 0;
+        if (next_msg) {
+            bytes_sent = MAX_PAYLOAD * next_msg->next_send_pkt;
+            next_msg->next_send_pkt++;
+            if (next_msg->next_send_pkt >= next_msg->num_pkts) {
+                tt_record("node-%d: removed message to node-%d from send_queue",
+                        c.local_rank, next_msg->peer);
+            } else {
+                insert_lrpt(&send_queue, right_nb, next_msg);
             }
         }
 
@@ -473,7 +516,6 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
         // Prepare the shuffle message header and payload.
         int peer = next_msg->peer;
         shfl_msg_buf& msg_buf = common_op.out_bufs[peer];
-        size_t bytes_sent = MAX_PAYLOAD * next_msg->next_send_pkt;
         size_t len = std::min(MAX_PAYLOAD, msg_buf.len - bytes_sent);
         udp_shuffle_msg_hdr msg_hdr = {
             .op_id = (int16_t) common_op.id,
@@ -499,13 +541,6 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
                     ret, iov[0].iov_len + iov[1].iov_len);
         }
         percpu_metric_get(tx_data_pkts)++;
-
-        next_msg->next_send_pkt++;
-        if (next_msg->next_send_pkt >= next_msg->num_pkts) {
-            list_del_from(&send_queue, &next_msg->sq_link);
-            tt_record("node-%d: removed message to node-%d from send_queue",
-                    c.local_rank, peer);
-        }
 
         now = rdtsc();
         timestamp_decl(send_fin)

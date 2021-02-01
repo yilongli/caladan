@@ -136,6 +136,7 @@ thread_t *softirq_run_thread(struct kthread *k, unsigned int budget)
 {
 	thread_t *th;
 	struct softirq_work *w;
+	uint64_t start_tsc = rdtsc();
 
 	/* check if there's any work available */
 	if (!softirq_work_available(k))
@@ -148,6 +149,7 @@ thread_t *softirq_run_thread(struct kthread *k, unsigned int budget)
 	softirq_gather_work(w, k, budget);
 	th->state = THREAD_STATE_RUNNABLE;
 	th->ready_tsc = rdtsc();
+	STAT(SOFTIRQ_RUN_THREAD_CYCLES) += th->ready_tsc - start_tsc;
 	return th;
 }
 

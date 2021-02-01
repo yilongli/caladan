@@ -191,6 +191,17 @@ static bool steal_softirq_work(struct kthread *l, struct kthread *r)
     unsigned int r_cpu;
     uint64_t start_tsc, expired_tsc;
 
+    // FIXME: the memory layout of kthread is problematic?
+    // kthread_idx, rxq, and lock are placed in the same cache line, so just
+    // reading kthread_idx & rxq will slow down the normal operation of @r
+    // (entering the sched context always requires acquiring the spinlock!)
+
+    // TODO: hack to avoid all-to-all stealing; doesn't feel right because what
+    // if the two active kthreads happen to be kthread 0 and 1? work-stealing
+    // will never happen...
+//    if (l->kthread_idx % 2 != r->kthread_idx % 2)
+//        return false;
+
 	assert_spin_lock_held(&l->lock);
 	assert(l->rq_head == 0 && l->rq_tail == 0);
 
@@ -226,6 +237,7 @@ static bool steal_work(struct kthread *l, struct kthread *r)
 #if 1
     // FIXME: hack to only steal softirq tasks
     return steal_softirq_work(l, r);
+//    return false;
 #endif
 
 	thread_t *th;
@@ -335,7 +347,7 @@ static __noinline struct thread *do_watchdog(struct kthread *l)
 static __noreturn __noinline void schedule(void)
 {
 	struct kthread *r = NULL, *l = myk();
-	uint64_t start_tsc, end_tsc, idle_tsc = 0, park_tsc, now;
+	uint64_t start_tsc, end_tsc, idle_tsc = 0, again_tsc = 0, now;
 	thread_t *th = NULL;
 	unsigned int start_idx;
 	unsigned int iters = 0;
@@ -360,10 +372,10 @@ static __noreturn __noinline void schedule(void)
 	STAT(RESCHEDULES)++;
 	start_tsc = rdtsc();
 	STAT(PROGRAM_CYCLES) += start_tsc - last_tsc;
-	tt_record4_tsc(l->curr_cpu, start_tsc, "sched: enter schedule, "
-            "prog_cyc %u (softirq_cyc %u), sched_cyc %u, idle_cyc %u",
-            STAT(PROGRAM_CYCLES), STAT(SOFTIRQ_CYCLES), STAT(SCHED_CYCLES),
-            STAT(IDLE_CYCLES));
+	tt_record4_tsc(l->curr_cpu, start_tsc, "sched: enter schedule, prog_cyc %u,"
+            " sched_cyc %u (softirq_run_thread_cyc %u), idle_cyc %u",
+            STAT(PROGRAM_CYCLES), STAT(SCHED_CYCLES),
+            STAT(SOFTIRQ_RUN_THREAD_CYCLES), STAT(IDLE_CYCLES));
 
 	/* increment the RCU generation number (even is in scheduler) */
 	store_release(&l->rcu_gen, l->rcu_gen + 1);
@@ -397,6 +409,9 @@ static __noreturn __noinline void schedule(void)
 	l->rq_head = l->rq_tail = 0;
 
 again:
+	/* record the latest time we re-check for works */
+	again_tsc = again_tsc ? rdtsc() : 1;
+
 	/* then check for local softirqs */
 	th = softirq_run_thread(l, RUNTIME_SOFTIRQ_LOCAL_BUDGET);
 	now = rdtsc();
@@ -456,13 +471,12 @@ again:
 	spin_unlock(&l->lock);
 
 	/* did not find anything to run, park this kthread */
-	park_tsc = rdtsc();
+	now = rdtsc();
 	if (!idle_tsc) {
 	    idle_tsc = start_tsc;
-        tt_record4_tsc(l->curr_cpu, park_tsc, "sched: nothing to do",
-                0, 0, 0, 0);
+        tt_record4_tsc(l->curr_cpu, now, "sched: nothing to do", 0, 0, 0, 0);
     }
-	STAT(SCHED_CYCLES) += park_tsc - start_tsc;
+	STAT(SCHED_CYCLES) += now - start_tsc;
 	/* we may have got a preempt signal before voluntarily yielding */
 	kthread_park(!preempt_cede_needed());
 	start_tsc = rdtsc();
@@ -490,11 +504,13 @@ done:
 	/* update exit stat counters */
 	end_tsc = rdtsc();
     STAT(SCHED_CYCLES) += end_tsc - start_tsc;
-    if (idle_tsc) {
-        STAT(IDLE_CYCLES) += end_tsc - idle_tsc;
+    if (again_tsc > 1) {
+        /* only the last check/poll will be counted as useful work */
+        STAT(IDLE_CYCLES) += again_tsc - (idle_tsc ? idle_tsc : start_tsc);
         tt_record4_tsc(l->curr_cpu, end_tsc, "sched: finally got work, "
-                "prog_cyc %u, sched_cyc %u, idle_cyc %u", STAT(PROGRAM_CYCLES),
-                STAT(SCHED_CYCLES), STAT(IDLE_CYCLES), 0);
+                "prog_cyc %u, sched_cyc %u (softirq_run_thread_cyc %u), "
+                "idle_cyc %u", STAT(PROGRAM_CYCLES), STAT(SCHED_CYCLES),
+                 STAT(SOFTIRQ_RUN_THREAD_CYCLES), STAT(IDLE_CYCLES));
     }
 	last_tsc = end_tsc;
 	if (cores_have_affinity(th->last_cpu, l->curr_cpu))
@@ -545,9 +561,9 @@ static __always_inline void enter_schedule(thread_t *myth)
 	STAT(PROGRAM_CYCLES) += now - last_tsc;
 	last_tsc = now;
 	tt_record4_tsc(k->curr_cpu, now, "sched: switch to next uthread, "
-            "prog_cyc %u (softirq_cyc %u), sched_cyc %u, idle_cyc %u",
-            STAT(PROGRAM_CYCLES), STAT(SOFTIRQ_CYCLES), STAT(SCHED_CYCLES),
-            STAT(IDLE_CYCLES));
+            "prog_cyc %u, sched_cyc %u (softirq_run_thread_cyc %u), idle_cyc %u",
+            STAT(PROGRAM_CYCLES), STAT(SCHED_CYCLES),
+            STAT(SOFTIRQ_RUN_THREAD_CYCLES), STAT(IDLE_CYCLES));
 
 	/* pop the next runnable thread from the queue */
 	th = k->rq[k->rq_tail++ % RUNTIME_RQ_SIZE];

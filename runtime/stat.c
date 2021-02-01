@@ -25,6 +25,8 @@ static const char *stat_names[] = {
 	"idle_cycles",
 	"sched_cycles",
 	"softirq_cycles",
+	"softirq_run_cycles",
+	"softirq_run_thread_cycles",
 	"program_cycles",
 	"threads_stolen",
 	"softirqs_stolen",
