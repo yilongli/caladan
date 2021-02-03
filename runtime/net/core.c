@@ -27,8 +27,6 @@ struct mempool net_tx_buf_mp;
 static struct tcache *net_tx_buf_tcache;
 static DEFINE_PERTHREAD(struct tcache_perthread, net_tx_buf_pt);
 
-#define MBUF_RESERVED (align_up(sizeof(struct mbuf), CACHE_LINE_SIZE))
-
 
 /*
  * RX Networking Functions

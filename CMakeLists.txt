@@ -10,6 +10,7 @@ include_directories(/usr/src/linux-headers-4.15.0-109/arch/x86/include/)
 include_directories(dpdk/config)
 include_directories(dpdk/lib/librte_net)
 include_directories(dpdk/lib/librte_mbuf)
+include_directories(dpdk/lib/librte_mempool)
 include_directories(dpdk/lib/librte_eal/common/include)
 include_directories(dpdk/lib/librte_eal/common/include/arch/x86)
 include_directories(dpdk/lib/librte_ethdev)
@@ -17,6 +18,7 @@ include_directories(dpdk/lib/librte_ethdev)
 
 add_compile_definitions(IOKERNEL_STATS)
 add_compile_definitions(RUNTIME_STATS)
+add_compile_definitions(JUMBOFRAME)
 
 add_executable(caladan
         apps/bench/callibrate.cc

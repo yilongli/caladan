@@ -5,12 +5,13 @@
 #pragma once
 
 #include <base/types.h>
+#include <net/ethernet.h>
 #include <net/udp.h>
 #include <runtime/net.h>
 #include <sys/uio.h>
 
 /* the maximum size of a UDP payload */
-#define UDP_MAX_PAYLOAD 1472
+#define UDP_MAX_PAYLOAD (ETH_MTU - 28)
 
 
 /*

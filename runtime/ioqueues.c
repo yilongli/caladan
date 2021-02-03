@@ -92,7 +92,7 @@ static size_t estimate_shm_space(void)
 
 	// Egress buffers
 	BUILD_ASSERT(ETH_MAX_LEN + sizeof(struct tx_net_hdr) <=
-			MBUF_DEFAULT_LEN);
+			MBUF_DEFAULT_LEN - MBUF_RESERVED - MBUF_DEFAULT_HEADROOM);
 	BUILD_ASSERT(PGSIZE_2MB % MBUF_DEFAULT_LEN == 0);
 	ret += EGRESS_POOL_SIZE(maxks);
 	ret = align_up(ret, PGSIZE_2MB);

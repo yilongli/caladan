@@ -15,9 +15,13 @@
 #include <base/list.h>
 #include <iokernel/queue.h>
 
-#define MBUF_DEFAULT_LEN	2048
+#ifdef JUMBOFRAME
+#define MBUF_DEFAULT_LEN		4096
+#else
+#define MBUF_DEFAULT_LEN		2048
+#endif
 #define MBUF_DEFAULT_HEADROOM	128
-
+#define MBUF_RESERVED			128		/* reserved for struct mbuf */
 
 struct mbuf {
 	struct mbuf	*next;	   /* the next mbuf in the mbufq */
@@ -46,6 +50,8 @@ struct mbuf {
 	uint8_t		flags;	    /* which flags were set? */
 	atomic_t	ref;	    /* a reference count for the mbuf */
 };
+BUILD_ASSERT(sizeof(struct mbuf) > MBUF_RESERVED - CACHE_LINE_SIZE);
+BUILD_ASSERT(sizeof(struct mbuf) <= MBUF_RESERVED);
 
 static inline unsigned char *__mbuf_pull(struct mbuf *m, unsigned int len)
 {

@@ -14,9 +14,18 @@
 #define ETH_CRC_LEN		4
 #define ETH_HDR_LEN		(ETH_ADDR_LEN * 2 + ETH_TYPE_LEN)
 #define ETH_MIN_LEN		64
+#ifdef JUMBOFRAME
+// We didn't set it to ETH_MAX_LEN_JUMBO for three reasons:
+//   - 4KB MTU is enough to reduce the software overhead of packet processing.
+//   - ETH_MAX_LEN must fit in MBUF_DEFAULT_LEN, along with other overheads
+//     (see ioqueues.c:estimate_shm_space for details).
+//   - Smaller packets are better for shuffle anyway.
+#define ETH_MAX_LEN		3818
+#else
 #define ETH_MAX_LEN		1518
+#endif
 #define	ETH_MAX_LEN_JUMBO	9018	/* max jumbo frame len, including CRC */
-#define ETH_MTU			1500
+#define ETH_MTU			(ETH_MAX_LEN - ETH_HDR_LEN - ETH_CRC_LEN)
 
 struct eth_addr {
 	uint8_t addr[ETH_ADDR_LEN];

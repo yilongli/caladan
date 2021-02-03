@@ -78,6 +78,13 @@ static const struct rte_eth_conf port_conf_default = {
 static inline int dpdk_port_init(uint8_t port, struct rte_mempool *mbuf_pool)
 {
 	struct rte_eth_conf port_conf = port_conf_default;
+#ifdef JUMBOFRAME
+	// No need to set max_rx_pkt_len because ETH_MAX_LEN is already redefined
+	// based on JUMBOFRAME.
+//    port_conf.rxmode.max_rx_pkt_len = ETH_MAX_LEN_JUMBO;
+    port_conf.rxmode.offloads |= DEV_RX_OFFLOAD_JUMBO_FRAME;
+#endif
+
 	const uint16_t rx_rings = 1, tx_rings = 1;
 	uint16_t nb_rxd = RX_RING_SIZE;
 	uint16_t nb_txd = TX_RING_SIZE;
@@ -106,6 +113,10 @@ static inline int dpdk_port_init(uint8_t port, struct rte_mempool *mbuf_pool)
 
 	/* Configure the Ethernet device. */
 	retval = rte_eth_dev_configure(port, rx_rings, tx_rings, &port_conf);
+	if (retval != 0)
+		return retval;
+
+	retval = rte_eth_dev_set_mtu(port, ETH_MTU);
 	if (retval != 0)
 		return retval;
 
