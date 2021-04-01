@@ -186,7 +186,7 @@ void tcp_tx_main(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
         peers.push_back((c.local_rank + i) % c.num_nodes);
     }
     size_t max_seg_size = opts.max_seg;
-    size_t max_unacked_msgs = opts.max_unacked_msgs;
+    size_t max_unacked_msgs = opts.max_out_msgs;
 
     // Customize the behavior based on the selected policy.
     if (opts.policy == ShufflePolicy::LOCKSTEP) {
@@ -241,9 +241,9 @@ bool
 tcp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
 {
     // Initialize the semaphore
-    op.acked_out_msgs = std::make_unique<rt::Semaphore>(opts.max_unacked_msgs);
+    op.acked_out_msgs = std::make_unique<rt::Semaphore>(opts.max_out_msgs);
     if ((opts.policy == ShufflePolicy::LOCKSTEP) &&
-        (opts.max_unacked_msgs > 1)) {
+        (opts.max_out_msgs > 1)) {
         op.acked_out_msgs = std::make_unique<rt::Semaphore>(1);
     }
 

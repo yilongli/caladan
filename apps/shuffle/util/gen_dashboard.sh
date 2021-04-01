@@ -2,9 +2,10 @@
 
 OP_ID=$1
 CLOCK_KHZ=$2
+RC_XX=$3
 
-shuffle_log="shuffle_op$OP_ID.log"
-sed -n "/op $((OP_ID-1)) completed in/,/op $((OP_ID)) completed in/p" logs/latest/rc01.log | \
+shuffle_log="${RC_XX}_${OP_ID}.log"
+sed -n "/op $((OP_ID-1)) completed in/,/op $((OP_ID)) completed in/p" logs/latest/$RC_XX.log | \
     sed -ne '/udp_shuffle: invoked/,$ p' | ./ttmerge.py $CLOCK_KHZ > $shuffle_log
 
 cpu_ids=$(grep -o "\[CPU.*\]" $shuffle_log | sort | uniq | grep -o "[0-9]*")

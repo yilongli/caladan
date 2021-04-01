@@ -139,9 +139,15 @@ struct udp_out_msg {
         , sq_link()
     {}
 
-    /// Implements the LRPT policy.
+    /// Returns true if the number of remaining packets is less than @msg.
     bool operator<(const udp_out_msg& msg) const {
-        return (num_pkts - next_send_pkt) > (msg.num_pkts - msg.next_send_pkt);
+        return (num_pkts - next_send_pkt) < (msg.num_pkts - msg.next_send_pkt);
+    }
+
+    /// Returns true if the number of remaining packets is less than or equal to
+    /// @msg.
+    bool operator<=(const udp_out_msg& msg) const {
+        return (num_pkts - next_send_pkt) <= (msg.num_pkts - msg.next_send_pkt);
     }
 };
 
@@ -324,6 +330,7 @@ static void rx_thread(struct udp_spawn_data *d)
         // Read the shuffle payload.
         memcpy(buf + msg_hdr.start, mbuf + sizeof(msg_hdr), msg_hdr.seg_size);
 
+        // TODO: shall we implement the receiver-side LRPT logic?
         // Attempt to advance the sliding window.
         bool rx_msg_complete;
         {
@@ -391,7 +398,7 @@ static void rx_thread(struct udp_spawn_data *d)
     }
 }
 
-static void insert_lrpt(list_head *pq, udp_out_msg *start, udp_out_msg *new_msg)
+static void insert_grpt(list_head *pq, udp_out_msg *start, udp_out_msg *new_msg)
 {
     // If @start is not specified, set @start to be the head of the queue.
     if (!start) {
@@ -402,25 +409,87 @@ static void insert_lrpt(list_head *pq, udp_out_msg *start, udp_out_msg *new_msg)
         }
     }
 
-    // Optimization: if @new_msg is not smaller than the last entry, just
+    // Optimization: if @new_msg is smaller than the last entry, just
     // insert it at the tail of the queue.
     udp_out_msg* end = list_tail(pq, struct udp_out_msg, sq_link);
-    if (!(*new_msg < *end)) {
+    if (*new_msg <= *end) {
         list_add_tail(pq, &new_msg->sq_link);
         return;
     }
 
-    // Otherwise, locate the first entry larger than @new_msg and insert
+    // Otherwise, locate the first entry smaller than @new_msg and insert
     // @new_msg right before it.
     while (true) {
         BUG_ON(!start);
-        if (*new_msg < *start) {
+        if (*start < *new_msg) {
             list_add_before(&start->sq_link, &new_msg->sq_link);
             return;
         }
         start = list_next(pq, start, sq_link);
     }
 }
+
+static void insert_srpt(list_head *pq, udp_out_msg *new_msg)
+{
+    // Locate the first entry larger than @new_msg and insert @new_msg right
+    // before it.
+    udp_out_msg *m = list_top(pq, struct udp_out_msg, sq_link);
+    while (m) {
+        if (*new_msg < *m) {
+            list_add_before(&m->sq_link, &new_msg->sq_link);
+            return;
+        }
+        m = list_next(pq, m, sq_link);
+    }
+    list_add_tail(pq, &new_msg->sq_link);
+}
+
+static void insert_rr(list_head *pq, udp_out_msg *new_msg, int rr_k)
+{
+    // Locate the (rr_k - 1)-th entry in the queue and insert @new_msg after it;
+    // if the queue is not long enough, insert to the tail.
+    udp_out_msg *m, *prev;
+
+    m = list_top(pq, struct udp_out_msg, sq_link);
+    BUG_ON(rr_k < 1);
+    if (!m || (rr_k == 1)) {
+        list_add(pq, &new_msg->sq_link);
+        return;
+    }
+
+    for (int i = 0; i < rr_k - 2; i++) {
+        prev = m;
+        m = list_next(pq, m, sq_link);
+        if (!m) {
+            list_add_after(&prev->sq_link, &new_msg->sq_link);
+            return;
+        }
+    }
+    list_add_after(&m->sq_link, &new_msg->sq_link);
+}
+
+/// Insert outgoing message @new_msg to @send_queue based on the shuffle policy.
+static void insert_pq(list_head *send_queue, udp_out_msg *new_msg,
+        ShufflePolicy policy, int max_out_msgs, udp_out_msg *start = nullptr)
+{
+    switch (policy) {
+        case ShufflePolicy::HADOOP:
+            insert_rr(send_queue, new_msg, max_out_msgs);
+            break;
+        case ShufflePolicy::LOCKSTEP:
+            list_add(send_queue, &new_msg->sq_link);
+            break;
+        case ShufflePolicy::LRPT:
+            insert_grpt(send_queue, start, new_msg);
+            break;
+        case ShufflePolicy::SRPT:
+            insert_srpt(send_queue, new_msg);
+            break;
+        default:
+            panic("unexpected policy value: %d", policy);
+    }
+}
+
 
 /**
  * Main function of the TX thread that is responsible for scheduling outbound
@@ -435,7 +504,8 @@ static void insert_lrpt(list_head *pq, udp_out_msg *start, udp_out_msg *new_msg)
  *      UDP-specifc shuffle object.
  */
 void
-udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
+udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
+        RunBenchOptions& opts)
 {
     uint64_t idle_cyc;
     uint64_t now;
@@ -443,13 +513,27 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
     timestamp_create(start)
     idle_cyc = 0;
 
-    // @send_queue is the main data structure used to implement the LRPT policy.
+    // Ranks of the remote peers to communicate with (in desired order).
+    std::vector<int> peers;
+    peers.reserve(c.num_nodes - 1);
+    for (int i = 1; i < c.num_nodes; i++) {
+        peers.push_back((c.local_rank + i) % c.num_nodes);
+    }
+    if (opts.policy == HADOOP) {
+        std::random_device rd;
+        std::mt19937 g(rd());
+        std::shuffle(peers.begin(), peers.end(), g);
+    }
+
+    // @send_queue: main data structure used to implement the shuffle policy.
     struct list_head send_queue = LIST_HEAD_INIT(send_queue);
     now = rdtsc();
-    for (int i = 1; i < c.num_nodes; i++) {
-        int peer = (c.local_rank + i) % c.num_nodes;
+
+    // Populate @send_queue with outgoing messages.
+    for (int peer : peers) {
         op.tx_msgs[peer].last_ack_tsc = now;
-        insert_lrpt(&send_queue, nullptr, &op.tx_msgs[peer]);
+        insert_pq(&send_queue, &op.tx_msgs[peer], opts.policy,
+                opts.max_out_msgs);
     }
 
     // FIXME: how to set the link speed properly???
@@ -457,22 +541,27 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
 
     // The TX thread loops until all msgs are sent; it paced itself based on
     // the TX link speed and put itself to sleep when possible.
-    // In every iteration, the TX thread finds the longest msg that hasn't
-    // filled up its send window and transmits one more packet, adjusts its pos
-    // in the LRPT queue accordingly.
+    // In every iteration, the TX thread finds the first msg in @send_queue that
+    // hasn't filled up its send window and transmits one more packet, adjusts
+    // its pos in the send queue accordingly.
     // In practice, the TX thread must also implement retransmission on timeout,
     // but maybe we can ignore that here? (two arguments: 1. buffer overflow is
     // rare (shouldn't happen in our experiment?); 2. timeout can be delegated
     // to Homa in a real impl.?).
     timestamp_create(search_start)
     while (!list_empty(&send_queue)) {
-        // Find the first message which hasn't filled up its send window;
-        // since @send_queue is ordered by LRPT, this is also the next message
-        // to send.
+        // Find the next message to send.
         udp_out_msg* next_msg = nullptr;
         udp_out_msg* right_nb = nullptr;
         udp_out_msg* msg;
+        size_t msg_idx = 0;
         list_for_each(&send_queue, msg, sq_link) {
+            // Only consider the top-N outbound messages in the send queue.
+            if (msg_idx >= opts.max_out_msgs) {
+                break;
+            }
+            msg_idx++;
+
             size_t send_wnd_start = msg->send_wnd_start.load();
             assert(msg->next_send_pkt >= send_wnd_start);
             size_t unacked_pkts = msg->next_send_pkt - send_wnd_start;
@@ -485,7 +574,7 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
         }
 
         // Remove @next_msg if it's completed, or re-insert it into @send_queue
-        // while keeping the LRPT order.
+        // following the shuffle policy.
         size_t bytes_sent = 0;
         if (next_msg) {
             bytes_sent = MAX_PAYLOAD * next_msg->next_send_pkt;
@@ -494,7 +583,8 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
                 tt_record("node-%d: removed message to node-%d from send_queue",
                         c.local_rank, next_msg->peer);
             } else {
-                insert_lrpt(&send_queue, right_nb, next_msg);
+                insert_pq(&send_queue, next_msg, opts.policy,
+                        opts.max_out_msgs, right_nb);
             }
         }
 
@@ -607,11 +697,6 @@ udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
         percpu_metric_get_remote(tx_ack_pkts, cpu) = 0;
     }
 
-    if (opts.policy != ShufflePolicy::LRPT) {
-        log_err("only LRPT policy is implemented");
-        return false;
-    }
-
     // Spin up a thread to copy the message destined to itself directly.
 #if 0
     rt::Thread local_copy([&] {
@@ -631,7 +716,7 @@ udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
     // The receive-side logic of shuffle will be triggered by ingress packet;
     // the rest of this method will handle the send-side logic.
     udp_shuffle_op& udp_shfl_op = *(udp_shuffle_op*) op.udp_shfl_obj;
-    udp_tx_main(c, op, udp_shfl_op);
+    udp_tx_main(c, op, udp_shfl_op, opts);
 
     // And wait for the receive threads to finish.
     udp_shfl_op.shuffle_done.Down();

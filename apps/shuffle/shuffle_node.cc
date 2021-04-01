@@ -67,25 +67,30 @@ void print_help(const char* exec_cmd) {
            "  open [port]      Open a UDP socket using a specific port."
            "  close [port]     Close a previously opened UDP socket.\n"
            "\n"
-           "gen_workload       Generate a shuffle workload as determined by\n"
-           "                   the options.\n"
+           "gen_workload       Generate a shuffle workload using a sorting "
+           "                   problem as determined by the options.\n"
            "  --seed           Seed value used to generate the message sizes.\n"
            "  --avg-msg-size   Average length of the shuffle messages.\n"
-           "  --skew-factor    Message skew factor (TODO: XXX).\n"
+           "  --data-dist      Type of the random number distribution used to\n"
+           "                   generate the sorting problem and its skewness\n"
+           "                   factor (e.g., \"zipf 1.0\", \"norm 0.33\").\n"
+           "  --log            Print the message size matrix to the log file.\n"
            "\n"
            "time_sync          Synchronize the clocks in the cluster.\n"
            "  --port           UDP port number dedicated to time_sync probes.\n"
            "  --seconds        Duration to run the time sync protocol.\n"
            "\n"
            "run_bench          Start running the shuffle benchmark.\n"
-           "  --protocol       Transport protocol to use: homa or tcp\n"
+           "  --protocol       Transport protocol to use: tcp or udp\n"
            "  --epoll          Use epoll for efficient monitoring of incoming\n"
            "                   data at TCP sockets.\n"
            "  --udp-port       UDP port number used to send and receive data-\n"
            "                   grams\n"
            "  --policy         hadoop, lockstep, SRPT, or LRPT\n"
-           "  --max-unacked    Maximum number of outbound messages which can\n"
-           "                   be in progress at any time.\n"
+           "  --max-in-msgs    Maximum number of inbound messages which can\n"
+           "                   be actively granted/acked any time.\n"
+           "  --max-out-msgs   Maximum number of outbound messages which can\n"
+           "                   be actively transmitted at any time.\n"
            "  --max-seg        Maximum number of bytes in a message segment.\n"
            "  --times          Number of times to repeat the experiment.\n"
            "\n"
@@ -101,10 +106,6 @@ void print_help(const char* exec_cmd) {
            "exit               Exit the application.\n",
            exec_cmd
            );
-    // TODO: should I give up homa in this project and use udp instead? the "thread_local" problem in shenango is really annoying when trying to do anything non-trivial
-    // TODO: implement --epoll properly
-    // FIXME: how to simulate the senario of 10000 sockets? should I implement it in another program?
-    // TODO: get memory intensive background traffic workload up and running (can we add an option like --add-interference)
 }
 
 /**
@@ -118,12 +119,12 @@ void print_help(const char* exec_cmd) {
 bool
 run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
 {
-    // fixme: move this method to run_bench.h?
-
     RunBenchOptions opts;
     if (!opts.parse_args(words)) {
         return false;
     }
+
+    std::vector<double> tputs;
 
     char ctrl_msg[32] = {};
     bool is_master = (cluster->local_rank == 0);
@@ -178,6 +179,7 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         double tx_speed = (op.total_tx_bytes - loc_bytes) / (125.0*elapsed_us);
         tt_record4_np("shuffle op %u completed in %u us (%u/%u Mbps)",
                 run, elapsed_us, rx_speed * 1000, tx_speed * 1000);
+        tputs.push_back(tx_speed);
 
         // The master node blocks until all followers complete.
         if (!is_master) {
@@ -197,6 +199,18 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
                     bench_overhead * 1.0 / cycles_per_us);
         }
     }
+
+    // Print summary statistics
+    std::sort(tputs.begin(), tputs.end());
+    size_t samples = tputs.size();
+    log_info("node-%d collected %lu data points, policy %s, max out %lu, "
+             "cluster size %d, avg. msg size %lu, data dist. %s-%.2f, "
+             "part. skewness %.2f, throughput %.1f Gbps", cluster->local_rank,
+             samples, shuffle_policy_str[opts.policy], opts.max_out_msgs,
+             cluster->num_nodes, op.total_tx_bytes / op.num_nodes,
+             op.use_zipf ? "zipf" : "norm", op.data_skew, op.part_skew,
+             tputs[int(samples * 0.5)]);
+
     return true;
 }
 
@@ -213,7 +227,7 @@ time_sync_cmd(std::vector<std::string>& words)
 {
     TimeSyncOptions opts;
     opts.parse_args(words);
-    // fixme: move to time_sync.h
+    panic("time_sync cmd not implemented yet");
     return true;
 }
 

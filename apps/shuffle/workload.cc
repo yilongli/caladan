@@ -184,13 +184,14 @@ private:
  *      generate the same workload on all nodes.
  * \param num_nodes
  *      Number of nodes in the cluster.
- * \param msg_skew_factor
- *      Zipfian skew factor used to generate the input keys, which controls
- *      the skewness of the message sizes indirectly.
+ * \param use_zipf
+ *      True if the input keys follow a Zipfian distribution; otherwise, a
+ *      Gaussian distribution.
+ * \param data_skew_factor
+ *      Skew factor used to generate the input keys, which controls the skewness
+ *      of the message sizes indirectly.
  * \param part_skew_factor
  *      Ratio between the largest partition and the smallest partition.
- * \param skew_msg
- *      True means the message sizes will be skewed; false, otherwise.
  * \param skew_input
  *      True means the input partitions will be skewed; false, otherwise.
  * \param skew_output
@@ -202,29 +203,30 @@ private:
  *      average message size).
  */
 std::vector<std::vector<double>>
-gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
-        double part_skew_factor, bool skew_msg, bool skew_input,
+gen_msg_sizes(unsigned rand_seed, int num_nodes, bool use_zipf,
+        double data_skew_factor, double part_skew_factor, bool skew_input,
         bool skew_output) {
     std::mt19937 gen(rand_seed);
-    zipf_distribution<> zipf(30000, msg_skew_factor);
+    // TODO: figure out how input distribution translates to msg distribution?
+    // Observation: highly skewed key distribution => data tend to concentrate
+    // on diagonal and last few columns in the shuffle matrix (TODO: WHY?)
+
+    // Check out https://en.wikipedia.org/wiki/Normal_distribution for a visual
+    // comparison of different stddev's.
+    double mean = 100000;
+    std::normal_distribution<> norm_dist(mean, data_skew_factor);
+    zipf_distribution<> zipf(30000, data_skew_factor);
 
     std::vector<std::vector<double>> msg_sizes;
     std::vector<std::vector<int>> nodes;
     std::vector<std::tuple<int, int, int>> ext_keys;
-
-    if (!skew_msg) {
-        for (int node_id = 0; node_id < num_nodes; node_id++) {
-            msg_sizes.emplace_back(num_nodes, 1.0);
-        }
-        return msg_sizes;
-    }
 
     // Compute how far a splitter of the input or output partitions is allowed
     // to move. If the partition skew factor is r (i.e., the largest partition
     // is at most r times as the smallest partition) and the fraction we are
     // allowed to grow/shrink a partition is x, then (1 + 2x)(1 - 2x) = r.
     double offset_ratio = (part_skew_factor - 1) / (2 * part_skew_factor + 2);
-    int avg_keys_per_node = num_nodes * 50;
+    int avg_keys_per_node = num_nodes * 5000;
     int offset_lim = avg_keys_per_node * offset_ratio;
 
     // Construct input partitions (potentially skewed)
@@ -241,7 +243,8 @@ gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
         nodes.emplace_back();
         msg_sizes.emplace_back(num_nodes);
         for (int key_idx = 0; key_idx < num_keys[node_id]; key_idx++) {
-            int num = zipf(gen);
+
+            int num = use_zipf ? zipf(gen) : std::round(norm_dist(gen));
             nodes[node_id].push_back(num);
             ext_keys.emplace_back(num, node_id, key_idx);
         }
@@ -276,6 +279,15 @@ gen_msg_sizes(unsigned rand_seed, int num_nodes, double msg_skew_factor,
             msg_sizes[src][dst] /= (avg_keys_per_node / num_nodes);
         }
     }
+
+    // Since highly skewed key distributions tend to produce large message sizes
+    // along the main diagonal in the shuffle matrix, reverse each row of the
+    // shuffle matrix to avoid generate a shuffle workload where most data on
+    // servers stay local during the shuffle.
+    for (auto& row : msg_sizes) {
+        std::reverse(row.begin(), row.end());
+    }
+
     return msg_sizes;
 }
 
@@ -289,7 +301,7 @@ gen_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
     }
 
     auto msg_sizes = gen_msg_sizes(opts.rand_seed, cluster.num_nodes,
-            opts.msg_skew_factor, opts.part_skew_factor, opts.skew_msg,
+            opts.zipf_dist, opts.data_skew_factor, opts.part_skew_factor,
             opts.skew_input, opts.skew_output);
 
     // Compute the total number of bytes that will be sent and received in the
@@ -309,6 +321,9 @@ gen_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
     op.tx_data.reset(new char[total_tx_bytes]);
     op.rx_data.reset(new char[total_rx_bytes]);
     op.next_inmsg_addr.store(op.rx_data.get());
+    op.use_zipf = opts.zipf_dist;
+    op.data_skew = opts.data_skew_factor;
+    op.part_skew = opts.part_skew_factor;
 
     // For debugging.
     memset(op.tx_data.get(), 'a' + cluster.local_rank, op.total_tx_bytes);
@@ -324,20 +339,81 @@ gen_workload_cmd(std::vector<std::string> &words, Cluster &cluster,
     op.in_bufs.clear();
     op.in_bufs.resize(cluster.num_nodes);
 
-    log_info("total TX bytes: %lu", op.total_tx_bytes);
-    log_info("total RX bytes: %lu", op.total_rx_bytes);
+    if (opts.print_to_log) {
+        std::vector<double> col_max(cluster.num_nodes, -1.0);
+        std::vector<double> col_min(cluster.num_nodes, 1e9);
+
+        log_info("shuffle matrix:");
+        std::string msg(" Rank:");
+        char buf[16] = {};
+        for (int i = 0; i < cluster.num_nodes; i++) {
+            sprintf(buf, "%6d", i);
+            msg.append(buf);
+        }
+        sprintf(buf, "%6s", "M/m");
+        msg.append(buf);
+        log_info("%s", msg.c_str());
+
+        for (int i = 0; i < cluster.num_nodes; i++) {
+            double row_max = -1.0, row_min = 1e9;
+            msg.clear();
+            sprintf(buf, "%6d", i);
+            msg.append(buf);
+            for (int j = 0; j < cluster.num_nodes; j++) {
+                double sz = msg_sizes[i][j];
+                if (sz < 1e-2) {
+                    sprintf(buf, "%6d", 0);
+                } else {
+                    sprintf(buf, "%6.2f", sz);
+                }
+                msg.append(buf);
+                row_max = std::max(row_max, sz);
+                row_min = std::min(row_min, sz);
+                col_max[j] = std::max(col_max[j], sz);
+                col_min[j] = std::min(col_min[j], sz);
+            }
+            sprintf(buf, "%6.2f", row_max / row_min);
+            msg.append(buf);
+            log_info("%s", msg.c_str());
+        }
+
+        msg.clear();
+        sprintf(buf, "%6s", "M/m");
+        msg.append(buf);
+        for (int i = 0; i < cluster.num_nodes; i++) {
+            sprintf(buf, "%6.2f", col_max[i] / col_min[i]);
+            msg.append(buf);
+        }
+        log_info("%s", msg.c_str());
+    }
+
+    log_info("total TX bytes %lu, total RX bytes %lu, avg. message size %lu",
+            op.total_tx_bytes, op.total_rx_bytes, opts.avg_message_size);
     std::string msg0("             Rank:");
     std::string msg1("Outbound messages:");
     std::string msg2(" Inbound messages:");
     char buf[16] = {};
+    double max_out_r = -1.0, min_out_r = 1e9;
+    double max_in_r = -1.0, min_in_r = 1e9;
     for (int i = 0; i < cluster.num_nodes; i++) {
         sprintf(buf, "%6d", i);
         msg0.append(buf);
-        sprintf(buf, "%6.0f", opts.avg_message_size * msg_sizes[local_rank][i]);
+        sprintf(buf, "%6.2f", msg_sizes[local_rank][i]);
         msg1.append(buf);
-        sprintf(buf, "%6.0f", opts.avg_message_size * msg_sizes[i][local_rank]);
+        sprintf(buf, "%6.2f", msg_sizes[i][local_rank]);
         msg2.append(buf);
+        max_out_r = std::max(max_out_r, msg_sizes[local_rank][i]);
+        min_out_r = std::min(min_out_r, msg_sizes[local_rank][i]);
+        max_in_r = std::max(max_in_r, msg_sizes[i][local_rank]);
+        min_in_r = std::min(min_in_r, msg_sizes[i][local_rank]);
     }
+    sprintf(buf, "%8s", "Max/Min");
+    msg0.append(buf);
+    sprintf(buf, "%8.2f", max_out_r / min_out_r);
+    msg1.append(buf);
+    sprintf(buf, "%8.2f", max_in_r / min_in_r);
+    msg2.append(buf);
+
     log_info("%s", msg0.c_str());
     log_info("%s", msg1.c_str());
     log_info("%s", msg2.c_str());

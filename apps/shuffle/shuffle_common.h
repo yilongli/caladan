@@ -43,6 +43,8 @@ struct shuffle_op {
         , total_rx_bytes()
         , tx_data()
         , rx_data()
+        , use_zipf()
+        , data_skew(1.0)
         , next_inmsg_addr()
         , acked_out_msgs()
         , udp_shfl_obj()
@@ -75,6 +77,15 @@ struct shuffle_op {
     /// Contiguous memory buffer used to store incoming shuffle data (must be
     /// at least @total_rx_bytes large).
     std::unique_ptr<char> rx_data;
+
+    /// @see GenWorkloadOptions::zipf_dist.
+    bool use_zipf;
+
+    /// @see GenWorkloadOptions::data_skew_factor.
+    double data_skew;
+
+    /// @see GenWorkloadOptions::part_skew_factor.
+    double part_skew;
 
     /// Starting address of the memory region that will be used to store the
     /// next inbound message.

@@ -31,6 +31,7 @@ import sys
 import time
 import traceback
 import fcntl
+import tempfile
 
 # If a server's id appears as a key in this dictionary, it means we have
 # started shuffle_node running on that node. The value of each entry is
@@ -67,7 +68,7 @@ default_defaults = {
     'num_nodes':           1,
     'master_addr':         '10.10.1.2:5000',
     'log_dir':             'logs/' + time.strftime('%Y%m%d%H%M%S'),
-    'log_file':            'node.log',
+    'log_file':            tempfile.mkdtemp() + 'node.log',
 }
 
 

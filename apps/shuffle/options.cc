@@ -10,6 +10,8 @@ extern "C" {
 #include <base/log.h>
 }
 
+const char* shuffle_policy_str[] = {"hadoop", "lockstep", "SRPT", "GRPT"};
+
 /**
  * Use ioctl to obtain the IP address of a local network interface.
  *
@@ -80,7 +82,7 @@ CommandLineOptions::parse_args(int argc, char* argv[]) {
                 panic("failed to parse '--master-addr %s'", argv[i+1]);
             i++;
         } else if (strcmp(option, "--log-file") == 0) {
-            FILE* file = std::fopen(argv[i+1], "w");
+            FILE* file = std::fopen(argv[i+1], "a");
             if (!file)
                 panic("failed to open log file '%s'", argv[i+1]);
             log_file = file;
@@ -129,14 +131,22 @@ GenWorkloadOptions::parse_args(std::vector<std::string> words)
             }
             avg_message_size = size;
             i++;
-        } else if (strcmp(option, "--msg-skew-factor") == 0) {
-            if (!parse(words[i+1].c_str(), &msg_skew_factor, option, "double"))
-            {
-                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+        } else if (strcmp(option, "--data-dist") == 0) {
+            if (strcmp(words[i+1].c_str(), "zipf") == 0) {
+                zipf_dist = true;
+            } else if (strcmp(words[i+1].c_str(), "norm") == 0) {
+                zipf_dist = false;
+            } else {
+                log_err("unknown distribution '%s'", words[i+1].c_str());
                 return false;
             }
-            skew_msg = true;
-            i++;
+            if (!parse(words[i+2].c_str(), &data_skew_factor, option, "double"))
+            {
+                log_err("failed to parse '%s %s %s'", option,
+                        words[i+1].c_str(), words[i+2].c_str());
+                return false;
+            }
+            i += 2;
         } else if (strcmp(option, "--part-skew-factor") == 0) {
             if (!parse(words[i+1].c_str(), &part_skew_factor, option, "double"))
             {
@@ -148,6 +158,8 @@ GenWorkloadOptions::parse_args(std::vector<std::string> words)
             skew_input = true;
         } else if (strcmp(option, "--skew-output") == 0) {
             skew_output = true;
+        } else if (strcmp(option, "--log") == 0) {
+            print_to_log = true;
         } else {
             log_err("Unknown option '%s'", option);
             return false;
@@ -205,8 +217,15 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
                 return false;
             }
             i++;
-        } else if (strcmp(option, "--max-unacked") == 0) {
-            if (!parse(words[i + 1].c_str(), &max_unacked_msgs, option,
+        } else if (strcmp(option, "--max-in-msgs") == 0) {
+            if (!parse(words[i + 1].c_str(), &max_in_msgs, option,
+                    "unsigned")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else if (strcmp(option, "--max-out-msgs") == 0) {
+            if (!parse(words[i + 1].c_str(), &max_out_msgs, option,
                     "unsigned")) {
                 log_err("failed to parse '%s %s'", option, words[i+1].c_str());
                 return false;

@@ -94,16 +94,17 @@ struct GenWorkloadOptions {
     /// Average size of the shuffle messages, in bytes.
     size_t avg_message_size;
 
-    /// Control the skewness of the shuffle message sizes.
-    double msg_skew_factor;
+    /// True means a Zipfian distribution will be used to generate the random
+    /// data; otherwise, a Guassian distribution is used.
+    bool zipf_dist;
+
+    /// Control the skewness of the random data (and the shuffle message sizes
+    /// implicitly).
+    double data_skew_factor;
 
     /// Ratio between the largest partition and the smallest partition.
     /// This option controls the skewness of the input/output partitions.
     double part_skew_factor;
-
-    /// True means the message sizes will be skewed; false, otherwise.
-    /// This option is set to true when option "--msg-skew-factor" is present.
-    bool skew_msg;
 
     /// True means the input partitions will be skewed; false, otherwise.
     bool skew_input;
@@ -111,14 +112,19 @@ struct GenWorkloadOptions {
     /// True means the output partitions will be skewed; false, otherwise.
     bool skew_output;
 
+    /// True means we should print the message size matrix to the log file
+    /// in the end.
+    bool print_to_log;
+
     explicit GenWorkloadOptions()
         : rand_seed(5689u)
         , avg_message_size()
-        , msg_skew_factor(1.0)
+        , zipf_dist(false)
+        , data_skew_factor(1.0)
         , part_skew_factor(1.0)
-        , skew_msg(false)
         , skew_input(false)
         , skew_output(false)
+        , print_to_log(false)
     {}
 
     bool parse_args(std::vector<std::string> words);
@@ -130,6 +136,8 @@ enum ShufflePolicy {
     SRPT = 2,
     LRPT = 3,
 };
+
+extern const char* shuffle_policy_str[];
 
 struct RunBenchOptions {
 
@@ -149,9 +157,14 @@ struct RunBenchOptions {
     /// and how many bytes to transmit).
     ShufflePolicy policy;
 
-    /// Maximum of outbound messages which can be in progress at any time.
-    /// Only used when the policy is HADOOP.
-    size_t max_unacked_msgs;
+    /// Maximum number of inbound messages that can be granted/acked at any
+    /// time. This is used to implement an incast control mechanism like Homa.
+    size_t max_in_msgs;
+
+    /// Maximum number of outbound messages that can be active at any time
+    /// (default: unlimited). This parameter is typically used with the "Hadoop"
+    /// policy to simulate a fixed number of TCP connections.
+    size_t max_out_msgs;
 
     /// In practice, shuffle messages often need to be divided and transmitted
     /// in segments. This value determines the maximum number of bytes in a
@@ -166,7 +179,8 @@ struct RunBenchOptions {
         , use_epoll(false)
         , udp_port()
         , policy(ShufflePolicy::HADOOP)
-        , max_unacked_msgs(1)
+        , max_in_msgs(5)
+        , max_out_msgs(10000)
         , max_seg(1400)
         , times(1)
     {}

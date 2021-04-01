@@ -8,4 +8,4 @@ rsync -rtv --exclude-from=rsync-exclude.txt ./base $target
 rsync -rtv --exclude-from=rsync-exclude.txt ./runtime $target
 rsync -rtv --exclude-from=rsync-exclude.txt ./inc $target
 rsync -rtv --exclude-from=rsync-exclude.txt ./iokernel $target
-rsync -rtv --exclude-from=rsync-exclude.txt ./build $target
+#rsync -rtv --exclude-from=rsync-exclude.txt ./build $target
