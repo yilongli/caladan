@@ -98,9 +98,9 @@ static const size_t NETWORK_BANDWIDTH = 25;
 /// RTTbytes = bandwdithGbps * 1000 * RTT_us / 8
 static const double RTT_BYTES = NETWORK_BANDWIDTH * 1e3 * 12.0 / 8;
 
-/// Size of the sliding window which controls the number of packets the sender
-/// is allowed to send ahead of the last acknowledged packet.
-static const size_t SEND_WND_SIZE = size_t((RTT_BYTES + 1499) / 1500);
+/// Maximum size of the sliding window which controls the number of packets the
+/// sender is allowed to send ahead of the last acknowledged packet.
+static const size_t MAX_SEND_WND = size_t((RTT_BYTES + 1499) / 1500);
 
 /// Declared in the global scope to enable access from both udp_shuffle_init()
 /// and udp_shuffle().
@@ -117,9 +117,22 @@ struct udp_out_msg {
     /// Total number of packets in this message.
     const size_t num_pkts;
 
-    /// Start index of the send window. This is the first packet in the message
-    /// which has not been acknowledged by the receiver.
-    std::atomic<size_t> send_wnd_start;
+    /// A 64-bit atomic variable which describes the state of the sliding send
+    /// window (i.e., the range of packets the sender is allowed transmit).
+    /// This atomic variable is actually composed from two 32-bit numbers to
+    /// enable more efficient accesses. The higher 32 bits represent the start
+    /// index of the send window (i.e., the first packet in the message which
+    /// has not been acknowledged by the receiver). The lower 32 bits represent
+    /// the index of the last packet the sender is allowed to send.
+    std::atomic<uint64_t> send_wnd;
+
+//    /// Start index of the send window. This is the first packet in the message
+//    /// which has not been acknowledged by the receiver.
+//    std::atomic<size_t> send_wnd_start;
+//
+//    /// Index of the last packet that we are allowed to send; incremented based
+//    /// on the ACK packets from the receiver.
+//    std::atomic<size_t> send_limit;
 
     /// Index of the next packet to send.
     size_t next_send_pkt;
@@ -128,15 +141,17 @@ struct udp_out_msg {
     uint64_t last_ack_tsc;
 
     /// Used to chain this outbound message into the send queue.
-    struct list_node sq_link;
+    struct list_node q_link;
 
     explicit udp_out_msg(int peer, size_t num_pkts)
         : peer(peer)
         , num_pkts(num_pkts)
-        , send_wnd_start()
+        , send_wnd()
+//        , send_wnd_start()
+//        , send_limit()
         , next_send_pkt()
-        , last_ack_tsc()
-        , sq_link()
+        , last_ack_tsc(0)
+        , q_link()
     {}
 
     /// Returns true if the number of remaining packets is less than @msg.
@@ -156,40 +171,74 @@ struct udp_out_msg {
  */
 struct udp_in_msg {
 
-    /// Minimum step to increment @next_ack_limit.
-    static const size_t MIN_ACK_INC = SEND_WND_SIZE / 4;
+    /// Minimum step to increment @grant_limit.
+    static const size_t MIN_ACK_INC = 4;
 
+    /// Network address of the message sender.
+    netaddr remote_addr;
+
+    /// Rank of the sender in the cluster.
+    int peer;
+
+    // TODO: revise the doc
     /// Protects @num_pkts, @recv_wnd_start, and @recv_wnd.
     rt::Mutex mutex;
 
     /// Number of packets in the message.
     size_t num_pkts;
 
+    // TODO: keep it or not? not used in receiver-side GRPT, but could be useful in SRPT
     /// Indicate when to send back the next ACK (when @recv_wnd_start exceeds
     /// this value); used to reduce the number of ACK packets.
-    size_t next_ack_limit;
+//    size_t next_ack_limit;
 
     /// Start index of the receive window. This is the first packet in the
     /// message which has not been received.
     size_t recv_wnd_start;
 
+    /// Index of the last packet that has been granted.
+    size_t grant_limit;
+
     /// Status of the packets in the receive window (the value indicates if
     /// the packet has been received). The entries in the window are organized
     /// as a ring, where the status of packet @recv_wnd_start is stored at index
-    /// @recv_wnd_start mod @SEND_WND_SIZE.
-    bool recv_wnd[SEND_WND_SIZE];
+    /// @recv_wnd_start % @MAX_SEND_WND.
+    bool recv_wnd[MAX_SEND_WND];
 
     /// True if the corresponding shfl_msg_buf struct has been initialized.
     std::atomic_bool buf_inited;
 
+    /// Used to chain this inbound message into udp_shuffle_op::grant_queue.
+    struct list_node q_link;
+
     explicit udp_in_msg()
-        : mutex()
+        : remote_addr()
+        , peer(-1)
+        , mutex()
         , num_pkts()
-        , next_ack_limit(MIN_ACK_INC)
+//        , next_ack_limit()
         , recv_wnd_start()
+        , grant_limit()
         , recv_wnd()
         , buf_inited()
+        , q_link()
     {}
+
+    /// Return the number of packets that have not been granted.
+    size_t ungranted_pkts() const {
+        return num_pkts - grant_limit - 1;
+    }
+
+    /// Returns true if the number of ungranted packets is less than @msg.
+    bool operator<(const udp_in_msg& msg) const {
+        return ungranted_pkts() < msg.ungranted_pkts();
+    }
+
+    /// Returns true if the number of ungranted packets is less than or equal
+    /// to @msg.
+    bool operator<=(const udp_in_msg& msg) const {
+        return ungranted_pkts() <= msg.ungranted_pkts();
+    }
 };
 
 struct udp_shuffle_op {
@@ -200,8 +249,8 @@ struct udp_shuffle_op {
 
     const int num_nodes;
 
-    /// UDP port number used by @udp_spawner.
-    const uint16_t port;
+    /// Local network address to use in this shuffle operation.
+    const netaddr local_addr;
 
     // Keeps track of the status of each outbound message; shared between
     // the TX and RX threads.
@@ -216,6 +265,30 @@ struct udp_shuffle_op {
     /// Number of inbound messages that have been fully received.
     std::atomic<int> completed_in_msgs;
 
+    /// How many more probe packets to receive before we can start granting
+    /// messages.
+    std::atomic<int> more_probes;
+
+    /// Protects @grant_queue.
+    rt::Mutex grant_mutex;
+
+    /// Number of grants that can be issued by the receiver (may drop below zero
+    /// temporarily).
+    int grants_avail;
+
+    /// Priority queue which contains the inbound messages in @rx_msgs that are
+    /// not yet completed; this is used to enforce the shuffle policy on the
+    /// receiver side.
+    struct list_head grant_queue;
+
+    // FIXME: not a good idea to add another field that requires locking...
+    /// Messages to be acked/granted. Always emtpy unless inside @rx_thread().
+    /// Declared here to avoid dynamic memory allocation.
+//    std::vector<udp_in_msg*> acks_to_send;
+
+    /// Options used to customize the behavior of this shuffle operation.
+    RunBenchOptions* options;
+
     /// Semaphore used to park the TX thread when all bytes in the sliding
     /// windows of the outbound messages have been transmitted (it can be
     /// woken up by the RX thread later when ACKs arrive).
@@ -227,11 +300,18 @@ struct udp_shuffle_op {
         : common_op(common_op)
         , local_rank(c->local_rank)
         , num_nodes(c->num_nodes)
-        , port(port)
+        , local_addr{c->local_ip, port}
         , tx_msgs()
         , rx_msgs(num_nodes)
         , acked_msgs(1)
         , completed_in_msgs(1)
+        , more_probes(num_nodes - 1)
+        , grant_mutex()
+        // TODO: make this configurable
+        , grants_avail(MAX_SEND_WND * 2)
+        , grant_queue(LIST_HEAD_INIT(grant_queue))
+//        , acks_to_send()
+        , options()
         , send_ready(0)
         , shuffle_done(0)
     {
@@ -244,6 +324,130 @@ struct udp_shuffle_op {
     }
 };
 
+template <typename T>
+static void insert_grpt(list_head *pq, T *start, T *new_msg)
+{
+    // If @start is not specified, set @start to be the head of the queue.
+    if (!start) {
+        start = list_top(pq, T, q_link);
+        if (!start) {
+            list_add(pq, &new_msg->q_link);
+            return;
+        }
+    }
+
+    // Optimization: if @new_msg is smaller than the last entry, just
+    // insert it at the tail of the queue.
+    T* end = list_tail(pq, T, q_link);
+    if (*new_msg <= *end) {
+        list_add_tail(pq, &new_msg->q_link);
+        return;
+    }
+
+    // Otherwise, locate the first entry smaller than @new_msg and insert
+    // @new_msg right before it.
+    while (true) {
+        BUG_ON(!start);
+        if (*start < *new_msg) {
+            list_add_before(&start->q_link, &new_msg->q_link);
+            return;
+        }
+        start = list_next(pq, start, q_link);
+    }
+}
+
+//static void insert_grpt(list_head *pq, udp_out_msg *start, udp_out_msg *new_msg)
+//{
+//    // If @start is not specified, set @start to be the head of the queue.
+//    if (!start) {
+//        start = list_top(pq, struct udp_out_msg, q_link);
+//        if (!start) {
+//            list_add(pq, &new_msg->q_link);
+//            return;
+//        }
+//    }
+//
+//    // Optimization: if @new_msg is smaller than the last entry, just
+//    // insert it at the tail of the queue.
+//    udp_out_msg* end = list_tail(pq, struct udp_out_msg, q_link);
+//    if (*new_msg <= *end) {
+//        list_add_tail(pq, &new_msg->q_link);
+//        return;
+//    }
+//
+//    // Otherwise, locate the first entry smaller than @new_msg and insert
+//    // @new_msg right before it.
+//    while (true) {
+//        BUG_ON(!start);
+//        if (*start < *new_msg) {
+//            list_add_before(&start->q_link, &new_msg->q_link);
+//            return;
+//        }
+//        start = list_next(pq, start, q_link);
+//    }
+//}
+
+static void insert_srpt(list_head *pq, udp_out_msg *new_msg)
+{
+    // Locate the first entry larger than @new_msg and insert @new_msg right
+    // before it.
+    udp_out_msg *m = list_top(pq, struct udp_out_msg, q_link);
+    while (m) {
+        if (*new_msg < *m) {
+            list_add_before(&m->q_link, &new_msg->q_link);
+            return;
+        }
+        m = list_next(pq, m, q_link);
+    }
+    list_add_tail(pq, &new_msg->q_link);
+}
+
+static void insert_rr(list_head *pq, udp_out_msg *new_msg, int rr_k)
+{
+    // Locate the (rr_k - 1)-th entry in the queue and insert @new_msg after it;
+    // if the queue is not long enough, insert to the tail.
+    udp_out_msg *m, *prev;
+
+    m = list_top(pq, struct udp_out_msg, q_link);
+    BUG_ON(rr_k < 1);
+    if (!m || (rr_k == 1)) {
+        list_add(pq, &new_msg->q_link);
+        return;
+    }
+
+    for (int i = 0; i < rr_k - 2; i++) {
+        prev = m;
+        m = list_next(pq, m, q_link);
+        if (!m) {
+            list_add_after(&prev->q_link, &new_msg->q_link);
+            return;
+        }
+    }
+    list_add_after(&m->q_link, &new_msg->q_link);
+}
+
+/// Insert outgoing message @new_msg to @send_queue based on the shuffle policy.
+static void insert_pq(list_head *send_queue, udp_out_msg *new_msg,
+        ShufflePolicy policy, int max_out_msgs, udp_out_msg *start = nullptr)
+{
+    switch (policy) {
+        case ShufflePolicy::HADOOP:
+            insert_rr(send_queue, new_msg, max_out_msgs);
+            break;
+        case ShufflePolicy::LOCKSTEP:
+            list_add(send_queue, &new_msg->q_link);
+            break;
+        case ShufflePolicy::LRPT:
+            insert_grpt(send_queue, start, new_msg);
+            break;
+        case ShufflePolicy::SRPT:
+            insert_srpt(send_queue, new_msg);
+            break;
+        default:
+            panic("unexpected policy value: %d", policy);
+    }
+}
+
 /**
  * Main function of the RX thread that is responsible for receiving packets,
  * assembling inbound messages, and sending back ACKs.
@@ -252,8 +456,15 @@ static void rx_thread(struct udp_spawn_data *d)
 {
     auto* op = (udp_shuffle_op*) d->app_state;
     auto* common_op = op->common_op;
-    bool send_ack = false;
     uint64_t start_tsc = rdtsc();
+
+    struct ack_info {
+        uint16_t ack_no;
+        uint16_t grant_limit;
+        udp_in_msg* msg;
+    };
+    // todo: avoid dynamic memory alloc?
+    std::vector<ack_info> acks_to_send;
 
     timestamp_decl(start)
     timestamp_decl(send_ack)
@@ -277,8 +488,8 @@ static void rx_thread(struct udp_spawn_data *d)
 
     if (msg_hdr.is_ack) {
         // ACK message.
-        tt_record(start_tsc, "node-%d: received ACK %u from node-%d",
-                op->local_rank, msg_hdr.ack_no, peer);
+        tt_record(start_tsc, "node-%d: received ACK %u from node-%d, grant %u",
+                op->local_rank, msg_hdr.ack_no, peer, msg_hdr.grant_limit);
         auto& tx_msg = op->tx_msgs[peer];
 //        tx_msg.last_ack_tsc = rdtsc();    // not used; needs lock
         if (msg_hdr.ack_no >= tx_msg.num_pkts) {
@@ -289,10 +500,11 @@ static void rx_thread(struct udp_spawn_data *d)
                 op->shuffle_done.Up();
             }
         } else {
-            size_t expected = tx_msg.send_wnd_start.load();
-            while (msg_hdr.ack_no > expected) {
-                if (tx_msg.send_wnd_start.compare_exchange_strong(expected,
-                        msg_hdr.ack_no)) {
+            uint64_t old_val = tx_msg.send_wnd.load();
+            uint64_t new_val =
+                    (uint64_t) msg_hdr.ack_no << 32u | msg_hdr.grant_limit;
+            while (new_val > old_val) {
+                if (tx_msg.send_wnd.compare_exchange_strong(old_val, new_val)) {
                     op->send_ready.Up();
                     break;
                 }
@@ -320,9 +532,16 @@ static void rx_thread(struct udp_spawn_data *d)
                         std::memory_order_relaxed);
                 common_op->in_bufs[peer].addr = buf;
                 common_op->in_bufs[peer].len = msg_hdr.msg_size;
+                op->more_probes--;
+                rx_msg.remote_addr = d->raddr;
+                rx_msg.peer = peer;
                 rx_msg.num_pkts =
                         (msg_hdr.msg_size + MAX_PAYLOAD - 1) / MAX_PAYLOAD;
                 rx_msg.buf_inited.store(true, std::memory_order_release);
+
+                // FIXME: don't hardcode the policy; generalize insert_pq w/ template
+                rt::ScopedLock<rt::Mutex> _(&op->grant_mutex);
+                insert_grpt(&op->grant_queue, (udp_in_msg*) nullptr, &rx_msg);
             }
         }
         buf = common_op->in_bufs[peer].addr;
@@ -330,14 +549,13 @@ static void rx_thread(struct udp_spawn_data *d)
         // Read the shuffle payload.
         memcpy(buf + msg_hdr.start, mbuf + sizeof(msg_hdr), msg_hdr.seg_size);
 
-        // TODO: shall we implement the receiver-side LRPT logic?
         // Attempt to advance the sliding window.
         bool rx_msg_complete;
         {
             percpu_metric_scoped_cs(handle_data_cycles, rx_msg.mutex, start)
-            rx_msg.recv_wnd[pkt_idx % SEND_WND_SIZE] = true;
+            rx_msg.recv_wnd[pkt_idx % MAX_SEND_WND] = true;
             while (true) {
-                size_t idx = rx_msg.recv_wnd_start % SEND_WND_SIZE;
+                size_t idx = rx_msg.recv_wnd_start % MAX_SEND_WND;
                 if (!rx_msg.recv_wnd[idx]) {
                     break;
                 }
@@ -345,16 +563,40 @@ static void rx_thread(struct udp_spawn_data *d)
                 rx_msg.recv_wnd_start++;
             }
             rx_msg_complete = (rx_msg.recv_wnd_start >= rx_msg.num_pkts);
-            if (rx_msg.recv_wnd_start > rx_msg.next_ack_limit) {
-                send_ack = true;
-                rx_msg.next_ack_limit += udp_in_msg::MIN_ACK_INC;
+
+            // The following code must acquire the grant mutex before accessing
+            // the grant queue.
+            rt::ScopedLock<rt::Mutex> _(&op->grant_mutex);
+
+            if (rx_msg_complete) {
+                acks_to_send.emplace_back(???, ???, &rx_msg);
+            }
+
+            // TODO: make unscheduled pkts configurable?
+            // Refill the grants if the packet was granted by us earlier.
+            if (pkt_idx >= 1) {
+                op->grants_avail++;
+            }
+
+            udp_in_msg* top_msg;
+            while (!list_empty(&op->grant_queue) && (op->grants_avail > 0)) {
+                top_msg = list_top(&op->grant_queue, udp_in_msg, q_link);
+                list_del_from(&op->grant_queue, &top_msg->q_link);
+                size_t grants = std::min(top_msg->ungranted_pkts(),
+                        udp_in_msg::MIN_ACK_INC);
+                top_msg->grant_limit += grants;
+                op->grants_avail -= grants;
+                // FIXME: insert_pq uses operator< internally, but acquiring individual udp_in_msg::mutex can be a perf. disaster.
+                // TODO: use insert_pq instead
+                insert_grpt(&op->grant_queue, (udp_in_msg*) nullptr, top_msg);
+
+                op->acks_to_send.push_back(top_msg);
             }
         }
 
         if (rx_msg_complete) {
             tt_record("node-%d: received message from node-%d",
                     op->local_rank, peer);
-            send_ack = true;
             if (op->completed_in_msgs.fetch_add(1) + 1 == op->num_nodes) {
                 // All inbound messages are received.
                 tt_record("node-%d: all in msgs received", op->local_rank);
@@ -362,20 +604,24 @@ static void rx_thread(struct udp_spawn_data *d)
             }
         }
 
-        if (send_ack) {
-            // Send back an ACK.
+        if (!acks_to_send.empty()) {
+            // Send back ACKs.
             timestamp_update(send_ack)
             udp_shuffle_msg_hdr ack_hdr = {
-                .op_id = msg_hdr.op_id,
+                .op_id = (int16_t) common_op->id,
                 .peer = (int16_t) op->local_rank,
                 .is_ack = 1,
-                .ack_no = (uint16_t) rx_msg.recv_wnd_start,
-//                .seg_size = 0, .msg_size = 0, .start = 0,
+//                .ack_no = 0, .seg_size = 0, .msg_size = 0, .start = 0,
             };
-            tt_record("node-%d: sending ACK %u to node-%d", op->local_rank,
-                    ack_hdr.ack_no, peer);
-            udp_respond(&ack_hdr, sizeof(ack_hdr), d);
-            percpu_metric_get(tx_ack_pkts)++;
+            for (auto info : acks_to_send) {
+                ack_hdr.ack_no = info.ack_no;
+                ack_hdr.grant_limit = info.grant_limit;
+                tt_record("node-%d: sending ACK %u to node-%d", op->local_rank,
+                        ack_hdr.ack_no, info.msg->peer);
+                udp_send(&ack_hdr, sizeof(ack_hdr), op->local_addr,
+                        info.msg->remote_addr);
+            }
+            percpu_metric_get(tx_ack_pkts) += acks_to_send.size();
         }
     }
 
@@ -387,7 +633,7 @@ static void rx_thread(struct udp_spawn_data *d)
         percpu_metric_get(handle_ack_cycles) +=
                 timestamp_get(end) - timestamp_get(start);
     } else {
-        if (!send_ack) {
+        if (num_acks == 0) {
             timestamp_get(send_ack) = timestamp_get(end);
         }
         percpu_metric_get(rx_data_pkts)++;
@@ -397,99 +643,6 @@ static void rx_thread(struct udp_spawn_data *d)
                 timestamp_get(end) - timestamp_get(send_ack);
     }
 }
-
-static void insert_grpt(list_head *pq, udp_out_msg *start, udp_out_msg *new_msg)
-{
-    // If @start is not specified, set @start to be the head of the queue.
-    if (!start) {
-        start = list_top(pq, struct udp_out_msg, sq_link);
-        if (!start) {
-            list_add(pq, &new_msg->sq_link);
-            return;
-        }
-    }
-
-    // Optimization: if @new_msg is smaller than the last entry, just
-    // insert it at the tail of the queue.
-    udp_out_msg* end = list_tail(pq, struct udp_out_msg, sq_link);
-    if (*new_msg <= *end) {
-        list_add_tail(pq, &new_msg->sq_link);
-        return;
-    }
-
-    // Otherwise, locate the first entry smaller than @new_msg and insert
-    // @new_msg right before it.
-    while (true) {
-        BUG_ON(!start);
-        if (*start < *new_msg) {
-            list_add_before(&start->sq_link, &new_msg->sq_link);
-            return;
-        }
-        start = list_next(pq, start, sq_link);
-    }
-}
-
-static void insert_srpt(list_head *pq, udp_out_msg *new_msg)
-{
-    // Locate the first entry larger than @new_msg and insert @new_msg right
-    // before it.
-    udp_out_msg *m = list_top(pq, struct udp_out_msg, sq_link);
-    while (m) {
-        if (*new_msg < *m) {
-            list_add_before(&m->sq_link, &new_msg->sq_link);
-            return;
-        }
-        m = list_next(pq, m, sq_link);
-    }
-    list_add_tail(pq, &new_msg->sq_link);
-}
-
-static void insert_rr(list_head *pq, udp_out_msg *new_msg, int rr_k)
-{
-    // Locate the (rr_k - 1)-th entry in the queue and insert @new_msg after it;
-    // if the queue is not long enough, insert to the tail.
-    udp_out_msg *m, *prev;
-
-    m = list_top(pq, struct udp_out_msg, sq_link);
-    BUG_ON(rr_k < 1);
-    if (!m || (rr_k == 1)) {
-        list_add(pq, &new_msg->sq_link);
-        return;
-    }
-
-    for (int i = 0; i < rr_k - 2; i++) {
-        prev = m;
-        m = list_next(pq, m, sq_link);
-        if (!m) {
-            list_add_after(&prev->sq_link, &new_msg->sq_link);
-            return;
-        }
-    }
-    list_add_after(&m->sq_link, &new_msg->sq_link);
-}
-
-/// Insert outgoing message @new_msg to @send_queue based on the shuffle policy.
-static void insert_pq(list_head *send_queue, udp_out_msg *new_msg,
-        ShufflePolicy policy, int max_out_msgs, udp_out_msg *start = nullptr)
-{
-    switch (policy) {
-        case ShufflePolicy::HADOOP:
-            insert_rr(send_queue, new_msg, max_out_msgs);
-            break;
-        case ShufflePolicy::LOCKSTEP:
-            list_add(send_queue, &new_msg->sq_link);
-            break;
-        case ShufflePolicy::LRPT:
-            insert_grpt(send_queue, start, new_msg);
-            break;
-        case ShufflePolicy::SRPT:
-            insert_srpt(send_queue, new_msg);
-            break;
-        default:
-            panic("unexpected policy value: %d", policy);
-    }
-}
-
 
 /**
  * Main function of the TX thread that is responsible for scheduling outbound
@@ -504,8 +657,7 @@ static void insert_pq(list_head *send_queue, udp_out_msg *new_msg,
  *      UDP-specifc shuffle object.
  */
 void
-udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
-        RunBenchOptions& opts)
+udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op)
 {
     uint64_t idle_cyc;
     uint64_t now;
@@ -519,7 +671,7 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
     for (int i = 1; i < c.num_nodes; i++) {
         peers.push_back((c.local_rank + i) % c.num_nodes);
     }
-    if (opts.policy == HADOOP) {
+    if (op.options->policy == HADOOP) {
         std::random_device rd;
         std::mt19937 g(rd());
         std::shuffle(peers.begin(), peers.end(), g);
@@ -530,20 +682,23 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
     now = rdtsc();
 
     // Populate @send_queue with outgoing messages.
+    RunBenchOptions* opts = op.options;
     for (int peer : peers) {
-        op.tx_msgs[peer].last_ack_tsc = now;
-        insert_pq(&send_queue, &op.tx_msgs[peer], opts.policy,
-                opts.max_out_msgs);
+        insert_pq(&send_queue, &op.tx_msgs[peer], opts->policy,
+                opts->max_out_msgs);
     }
 
-    // FIXME: how to set the link speed properly???
+    // FIXME: make the link speed configurable via cmd line?
     QueueEstimator queue_estimator(NETWORK_BANDWIDTH * 1000);
+
+    // FIXME: explain how this is used to implement the probe phase
+    udp_out_msg* probe_msg = list_top(&send_queue, udp_out_msg, q_link);
 
     // The TX thread loops until all msgs are sent; it paced itself based on
     // the TX link speed and put itself to sleep when possible.
-    // In every iteration, the TX thread finds the first msg in @send_queue that
-    // hasn't filled up its send window and transmits one more packet, adjusts
-    // its pos in the send queue accordingly.
+    // In each iteration, the TX thread finds the first msg in @send_queue that
+    // is allowed to transmit at least one more packet, sends out the packet,
+    // and adjusts its position in the send queue accordingly.
     // In practice, the TX thread must also implement retransmission on timeout,
     // but maybe we can ignore that here? (two arguments: 1. buffer overflow is
     // rare (shouldn't happen in our experiment?); 2. timeout can be delegated
@@ -553,28 +708,39 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
         // Find the next message to send.
         udp_out_msg* next_msg = nullptr;
         udp_out_msg* right_nb = nullptr;
-        udp_out_msg* msg;
-        size_t msg_idx = 0;
-        list_for_each(&send_queue, msg, sq_link) {
-            // Only consider the top-N outbound messages in the send queue.
-            if (msg_idx >= opts.max_out_msgs) {
-                break;
-            }
-            msg_idx++;
 
-            size_t send_wnd_start = msg->send_wnd_start.load();
-            assert(msg->next_send_pkt >= send_wnd_start);
-            size_t unacked_pkts = msg->next_send_pkt - send_wnd_start;
-            if (unacked_pkts < SEND_WND_SIZE) {
-                next_msg = msg;
-                right_nb = list_next(&send_queue, next_msg, sq_link);
-                list_del_from(&send_queue, &msg->sq_link);
-                break;
+        bool probe_phase = (probe_msg != nullptr);
+        if (probe_phase) {
+            // Probe phase: send one packet from each of the outbound messages
+            next_msg = probe_msg;
+            probe_msg = list_next(&send_queue, probe_msg, q_link);
+            if (next_msg->num_pkts <= 1) {
+                list_del_from(&send_queue, &next_msg->q_link);
+            }
+        } else {
+            // Normal phase: send from the message with the highest priority
+            udp_out_msg* msg;
+            size_t msg_idx = 0;
+            list_for_each(&send_queue, msg, q_link) {
+                // Only consider the top-N outbound messages in the send queue.
+                if (msg_idx >= opts->max_out_msgs) {
+                    break;
+                }
+                msg_idx++;
+
+                uint32_t grant_limit = msg->send_wnd.load();
+                if (msg->next_send_pkt <= grant_limit) {
+                    next_msg = msg;
+                    right_nb = list_next(&send_queue, next_msg, q_link);
+                    list_del_from(&send_queue, &msg->q_link);
+                    break;
+                }
             }
         }
 
-        // Remove @next_msg if it's completed, or re-insert it into @send_queue
-        // following the shuffle policy.
+
+        // In the normal phase, @next_msg is removed in the loop above;
+        // re-insert it into @send_queue if it's not completed yet.
         size_t bytes_sent = 0;
         if (next_msg) {
             bytes_sent = MAX_PAYLOAD * next_msg->next_send_pkt;
@@ -582,9 +748,9 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
             if (next_msg->next_send_pkt >= next_msg->num_pkts) {
                 tt_record("node-%d: removed message to node-%d from send_queue",
                         c.local_rank, next_msg->peer);
-            } else {
-                insert_pq(&send_queue, next_msg, opts.policy,
-                        opts.max_out_msgs, right_nb);
+            } else if (!probe_phase) {
+                insert_pq(&send_queue, next_msg, opts->policy,
+                        opts->max_out_msgs, right_nb);
             }
         }
 
@@ -621,8 +787,8 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
         struct iovec iov[2];
         iov[0] = {.iov_base = &msg_hdr, .iov_len = sizeof(msg_hdr)};
         iov[1] = {.iov_base = msg_buf.addr + bytes_sent, .iov_len = len};
-        netaddr laddr = {c.local_ip, op.port};
-        netaddr raddr = {c.server_list[peer], op.port};
+        netaddr laddr = op.local_addr;
+        netaddr raddr = {c.server_list[peer], op.local_addr.port};
         tt_record("node-%d: sending bytes %lu-%lu to node-%d",
                 c.local_rank, bytes_sent, bytes_sent + len, peer);
         ssize_t ret = udp_sendv(iov, 2, laddr, raddr);
@@ -716,7 +882,8 @@ udp_shuffle(RunBenchOptions& opts, Cluster& c, shuffle_op& op)
     // The receive-side logic of shuffle will be triggered by ingress packet;
     // the rest of this method will handle the send-side logic.
     udp_shuffle_op& udp_shfl_op = *(udp_shuffle_op*) op.udp_shfl_obj;
-    udp_tx_main(c, op, udp_shfl_op, opts);
+    udp_shfl_op.options = &opts;
+    udp_tx_main(c, op, udp_shfl_op);
 
     // And wait for the receive threads to finish.
     udp_shfl_op.shuffle_done.Down();

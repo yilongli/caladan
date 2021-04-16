@@ -26,6 +26,11 @@ struct udp_shuffle_msg_hdr {
     /// that has not been received.
     uint16_t ack_no : 15;
 
+    // TODO: redesign the layout of this struct; maybe use union?
+    /// When @is_ack is non-zero, this value is the index of the last packet
+    /// that the sender is allowed to send.
+    uint16_t grant_limit;
+
     /// --------------------------------------------------------
     /// The following members are only used when @is_ack is zero.
     /// --------------------------------------------------------
