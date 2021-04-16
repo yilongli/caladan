@@ -153,12 +153,16 @@ struct RunBenchOptions {
     /// receive datagrams.
     uint16_t udp_port;
 
+    /// Network bandwidth available to our shuffle application, in Gbps.
+    size_t link_speed;
+
     /// Policy used to schedule shuffle (e.g., which message to transmit next
     /// and how many bytes to transmit).
     ShufflePolicy policy;
 
-    /// Maximum number of inbound messages that can be granted/acked at any
-    /// time. This is used to implement an incast control mechanism like Homa.
+    /// Maximum number of inbound messages that can be active at any time
+    /// (default: unlimited). This parameter is typically used with the "Hadoop"
+    /// policy to enforce the maximum number of connections a server can accept.
     size_t max_in_msgs;
 
     /// Maximum number of outbound messages that can be active at any time
@@ -178,8 +182,9 @@ struct RunBenchOptions {
         : tcp_protocol(true)
         , use_epoll(false)
         , udp_port()
+        , link_speed(25)
         , policy(ShufflePolicy::HADOOP)
-        , max_in_msgs(5)
+        , max_in_msgs(10000)
         , max_out_msgs(10000)
         , max_seg(1400)
         , times(1)

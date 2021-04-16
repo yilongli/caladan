@@ -237,6 +237,12 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
                 return false;
             }
             i++;
+        } else if (strcmp(option, "--link-speed") == 0) {
+            if (!parse(words[i+1].c_str(), &link_speed, option, "unsigned")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
         } else if (strcmp(option, "--times") == 0) {
             if (!parse(words[i+1].c_str(), &times, option, "unsigned")) {
                 log_err("failed to parse '%s %s'", option, words[i+1].c_str());

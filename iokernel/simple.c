@@ -149,6 +149,9 @@ static unsigned int simple_choose_core(struct proc *p)
 	struct thread *th;
 	unsigned int core, tmp;
 
+    // FIXME: set the following to 1 to allocate physical cores over HTs
+#define PREFER_PHYS_CORE 1
+#if !PREFER_PHYS_CORE
 	/* first try to find a matching active hyperthread */
 	sched_for_each_allowed_core(core, tmp) {
 		unsigned int sib = sched_siblings[core];
@@ -160,6 +163,7 @@ static unsigned int simple_choose_core(struct proc *p)
 		if (bitmap_test(sched_allowed_cores, sib))
 			return sib;
 	}
+#endif
 
 	/* then try to find a previously used core (to improve locality) */
 	list_for_each(&p->idle_threads, th, idle_link) {
@@ -184,6 +188,19 @@ static unsigned int simple_choose_core(struct proc *p)
 	core = bitmap_find_next_set(simple_idle_cores, NCPU, 0);
 	if (core != NCPU)
 		return core;
+
+#if PREFER_PHYS_CORE
+	sched_for_each_allowed_core(core, tmp) {
+		unsigned int sib = sched_siblings[core];
+		if (cores[core] != sd)
+			continue;
+		if (cores[sib] == sd || (cores[sib] != NULL &&
+		    !simple_proc_is_preemptible(cores[sib], sd)))
+			continue;
+		if (bitmap_test(sched_allowed_cores, sib))
+			return sib;
+	}
+#endif
 
 	/* finally look for any preemptible core */
 	sched_for_each_allowed_core(core, tmp) {
