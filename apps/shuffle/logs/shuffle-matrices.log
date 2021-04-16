@@ -1,0 +1,1226 @@
+CPU 01| <5> cpu: detected 20 cores, 1 nodes
+CPU 01| <5> time: detected 2394 ticks / us
+[  0.000496] CPU 02| <5> loading configuration from '/users/yilongl/caladan_4HT.config'
+[  0.000539] CPU 02| <5> process pid: 117726
+[  0.026614] CPU 02| <5> net: started network stack
+[  0.026621] CPU 02| <5> net: using the following configuration:
+[  0.026622] CPU 02| <5>   addr:	10.10.1.2
+[  0.026624] CPU 02| <5>   netmask:	255.255.255.0
+[  0.026625] CPU 02| <5>   gateway:	10.10.1.0
+[  0.026625] CPU 02| <5>   mac:	C2:8A:6F:42:7A:37
+[  0.026729] CPU 02| <5> thread: created thread 0
+[  0.026783] CPU 02| <5> spawning 4 kthreads
+[  0.026898] CPU 05| <5> thread: created thread 1
+[  0.026907] CPU 16| <5> thread: created thread 2
+[  0.026944] CPU 02| <5> thread: created thread 3
+[  0.033661] CPU 02| <5> node-0: registered node-1 (10.10.1.8)
+[  0.033917] CPU 01| <5> node-0: registered node-2 (10.10.1.7)
+[  0.034022] CPU 11| <5> node-0: registered node-3 (10.10.1.9)
+[  0.037842] CPU 01| <5> node-0: registered node-4 (10.10.1.10)
+[  0.042028] CPU 01| <5> node-0: registered node-5 (10.10.1.11)
+[  0.045759] CPU 12| <5> node-0: registered node-6 (10.10.1.6)
+[  0.329751] CPU 12| <5> node-0: registered node-7 (10.10.1.5)
+[  0.329887] CPU 12| <5> node-0: registered node-8 (10.10.1.3)
+[  0.329923] CPU 12| <5> node-0: registered node-9 (10.10.1.4)
+[  0.371914] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 0.70 --log
+[  0.514099] CPU 12| <5> shuffle matrix:
+[  0.514105] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  0.514117] CPU 12| <5>      0  1.00  1.01  0.99  1.02  0.99  1.02  0.99  0.99  0.99  0.99  1.03
+[  0.514125] CPU 12| <5>      1  0.99  0.99  1.01  1.00  1.01  0.98  1.00  1.02  1.00  1.01  1.04
+[  0.514131] CPU 12| <5>      2  1.00  0.99  1.01  0.98  1.00  1.03  1.02  0.99  0.99  0.99  1.05
+[  0.514138] CPU 12| <5>      3  0.99  1.01  0.98  1.00  0.99  1.00  1.01  1.00  1.01  1.02  1.03
+[  0.514145] CPU 12| <5>      4  0.99  1.00  1.01  1.01  1.01  0.99  0.99  1.01  1.01  0.98  1.03
+[  0.514152] CPU 12| <5>      5  1.00  1.01  0.98  1.01  1.02  1.00  0.98  1.00  1.01  0.99  1.04
+[  0.514158] CPU 12| <5>      6  1.01  1.01  1.00  0.99  1.00  1.00  0.99  1.01  0.98  1.00  1.03
+[  0.514165] CPU 12| <5>      7  1.01  0.99  1.01  0.99  1.03  0.99  1.01  0.98  1.00  0.99  1.05
+[  0.514172] CPU 12| <5>      8  1.00  1.00  0.98  0.98  1.00  1.00  1.01  1.01  0.99  1.02  1.04
+[  0.514178] CPU 12| <5>      9  1.01  0.98  1.02  1.02  0.97  0.99  0.99  1.00  1.01  1.00  1.06
+[  0.514184] CPU 12| <5>    M/m  1.03  1.03  1.04  1.04  1.06  1.06  1.04  1.04  1.03  1.04
+[  0.514185] CPU 12| <5> total TX bytes 499999, total RX bytes 499999, avg. message size 50000
+[  0.514205] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  0.514206] CPU 12| <5> Outbound messages:  1.00  1.01  0.99  1.02  0.99  1.02  0.99  0.99  0.99  0.99    1.03
+[  0.514207] CPU 12| <5>  Inbound messages:  1.00  0.99  1.00  0.99  0.99  1.00  1.01  1.01  1.00  1.01    1.03
+[  0.572484] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  0.573607] CPU 12| <5> node-0 completed shuffle op 0 in 1006.0 us (3.58/3.58 Gbps), benchmark overhead 18.5 us
+[  0.573839] CPU 02| <5> node-0 completed shuffle op 1 in 190.0 us (18.95/18.95 Gbps), benchmark overhead 19.1 us
+[  0.574067] CPU 12| <5> node-0 completed shuffle op 2 in 197.0 us (18.27/18.27 Gbps), benchmark overhead 9.8 us
+[  0.574291] CPU 01| <5> node-0 completed shuffle op 3 in 188.8 us (19.07/19.07 Gbps), benchmark overhead 14.1 us
+[  0.574528] CPU 12| <5> node-0 completed shuffle op 4 in 196.1 us (18.36/18.36 Gbps), benchmark overhead 18.6 us
+[  0.574754] CPU 12| <5> node-0 completed shuffle op 5 in 187.7 us (19.18/19.18 Gbps), benchmark overhead 17.3 us
+[  0.574981] CPU 12| <5> node-0 completed shuffle op 6 in 194.2 us (18.54/18.54 Gbps), benchmark overhead 14.4 us
+[  0.575204] CPU 01| <5> node-0 completed shuffle op 7 in 190.8 us (18.86/18.86 Gbps), benchmark overhead 12.9 us
+[  0.575426] CPU 12| <5> node-0 completed shuffle op 8 in 187.7 us (19.18/19.18 Gbps), benchmark overhead 12.2 us
+[  0.575757] CPU 12| <5> node-0 completed shuffle op 9 in 193.3 us (18.62/18.62 Gbps), benchmark overhead 16.4 us
+[  0.575981] CPU 11| <5> node-0 completed shuffle op 10 in 193.8 us (18.57/18.57 Gbps), benchmark overhead 8.8 us
+[  0.576207] CPU 12| <5> node-0 completed shuffle op 11 in 189.0 us (19.04/19.04 Gbps), benchmark overhead 14.8 us
+[  0.576426] CPU 12| <5> node-0 completed shuffle op 12 in 185.3 us (19.42/19.42 Gbps), benchmark overhead 16.2 us
+[  0.576650] CPU 01| <5> node-0 completed shuffle op 13 in 185.0 us (19.45/19.45 Gbps), benchmark overhead 16.7 us
+[  0.576870] CPU 02| <5> node-0 completed shuffle op 14 in 191.7 us (18.78/18.78 Gbps), benchmark overhead 9.4 us
+[  0.577095] CPU 12| <5> node-0 completed shuffle op 15 in 189.2 us (19.03/19.03 Gbps), benchmark overhead 15.7 us
+[  0.577316] CPU 12| <5> node-0 completed shuffle op 16 in 187.6 us (19.18/19.18 Gbps), benchmark overhead 15.7 us
+[  0.577641] CPU 01| <5> node-0 completed shuffle op 17 in 182.1 us (19.77/19.77 Gbps), benchmark overhead 17.9 us
+[  0.577855] CPU 11| <5> node-0 completed shuffle op 18 in 179.5 us (20.05/20.05 Gbps), benchmark overhead 14.4 us
+[  0.578063] CPU 01| <5> node-0 completed shuffle op 19 in 174.4 us (20.64/20.64 Gbps), benchmark overhead 13.5 us
+[  0.578069] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 49999, data dist. zipf-0.70, part. skewness 1.00, throughput 19.0 Gbps
+[  0.672854] CPU 01| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 0.80 --log
+[  0.814062] CPU 01| <5> shuffle matrix:
+[  0.814069] CPU 01| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  0.814078] CPU 01| <5>      0  1.00  1.01  0.99  1.02  0.99  1.02  0.99  1.00  0.96  1.01  1.06
+[  0.814085] CPU 01| <5>      1  0.99  0.99  1.01  1.00  1.01  0.98  1.00  1.02  0.97  1.04  1.07
+[  0.814092] CPU 01| <5>      2  0.99  0.99  1.01  0.98  1.00  1.03  1.02  0.99  0.96  1.02  1.07
+[  0.814099] CPU 01| <5>      3  0.99  1.01  0.98  1.00  0.99  1.00  1.01  1.00  0.99  1.04  1.06
+[  0.814105] CPU 01| <5>      4  0.99  1.00  1.01  1.01  1.00  0.99  1.00  1.00  1.03  0.96  1.07
+[  0.814112] CPU 01| <5>      5  1.01  1.01  0.98  1.00  1.02  1.00  0.98  1.00  1.02  0.98  1.04
+[  0.814119] CPU 01| <5>      6  1.01  1.01  1.00  0.99  1.00  1.00  0.99  1.00  1.00  0.99  1.03
+[  0.814125] CPU 01| <5>      7  1.01  1.00  1.01  0.99  1.03  0.99  1.01  0.97  1.02  0.97  1.06
+[  0.814132] CPU 01| <5>      8  1.00  1.00  0.98  0.98  1.00  1.00  1.01  1.01  1.01  1.00  1.03
+[  0.814138] CPU 01| <5>      9  1.01  0.98  1.02  1.02  0.97  0.99  0.99  1.00  1.03  0.98  1.06
+[  0.814144] CPU 01| <5>    M/m  1.03  1.03  1.04  1.04  1.06  1.05  1.04  1.05  1.07  1.08
+[  0.814145] CPU 01| <5> total TX bytes 499999, total RX bytes 499999, avg. message size 50000
+[  0.814162] CPU 01| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  0.814163] CPU 01| <5> Outbound messages:  1.00  1.01  0.99  1.02  0.99  1.02  0.99  1.00  0.96  1.01    1.06
+[  0.814164] CPU 01| <5>  Inbound messages:  1.00  0.99  0.99  0.99  0.99  1.01  1.01  1.01  1.00  1.01    1.03
+[  0.873412] CPU 01| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  0.873794] CPU 12| <5> node-0 completed shuffle op 0 in 268.1 us (13.43/13.43 Gbps), benchmark overhead 20.6 us
+[  0.874005] CPU 01| <5> node-0 completed shuffle op 1 in 178.2 us (20.20/20.20 Gbps), benchmark overhead 13.9 us
+[  0.874214] CPU 02| <5> node-0 completed shuffle op 2 in 174.9 us (20.58/20.58 Gbps), benchmark overhead 13.7 us
+[  0.874428] CPU 12| <5> node-0 completed shuffle op 3 in 176.2 us (20.43/20.43 Gbps), benchmark overhead 20.4 us
+[  0.874643] CPU 12| <5> node-0 completed shuffle op 4 in 178.1 us (20.21/20.21 Gbps), benchmark overhead 14.0 us
+[  0.874848] CPU 01| <5> node-0 completed shuffle op 5 in 175.8 us (20.47/20.47 Gbps), benchmark overhead 11.4 us
+[  0.875052] CPU 12| <5> node-0 completed shuffle op 6 in 173.9 us (20.69/20.69 Gbps), benchmark overhead 12.6 us
+[  0.875294] CPU 02| <5> node-0 completed shuffle op 7 in 173.7 us (20.73/20.73 Gbps), benchmark overhead 13.5 us
+[  0.875498] CPU 12| <5> node-0 completed shuffle op 8 in 173.8 us (20.71/20.71 Gbps), benchmark overhead 12.0 us
+[  0.875705] CPU 11| <5> node-0 completed shuffle op 9 in 176.0 us (20.46/20.46 Gbps), benchmark overhead 12.7 us
+[  0.875910] CPU 12| <5> node-0 completed shuffle op 10 in 174.7 us (20.60/20.60 Gbps), benchmark overhead 11.7 us
+[  0.876117] CPU 01| <5> node-0 completed shuffle op 11 in 173.9 us (20.70/20.70 Gbps), benchmark overhead 14.1 us
+[  0.876322] CPU 12| <5> node-0 completed shuffle op 12 in 174.2 us (20.67/20.67 Gbps), benchmark overhead 12.8 us
+[  0.876529] CPU 02| <5> node-0 completed shuffle op 13 in 176.5 us (20.39/20.39 Gbps), benchmark overhead 11.8 us
+[  0.876737] CPU 12| <5> node-0 completed shuffle op 14 in 175.8 us (20.47/20.47 Gbps), benchmark overhead 14.9 us
+[  0.876942] CPU 01| <5> node-0 completed shuffle op 15 in 177.2 us (20.31/20.31 Gbps), benchmark overhead 10.7 us
+[  0.877148] CPU 01| <5> node-0 completed shuffle op 16 in 174.1 us (20.67/20.67 Gbps), benchmark overhead 14.3 us
+[  0.877355] CPU 01| <5> node-0 completed shuffle op 17 in 173.4 us (20.76/20.76 Gbps), benchmark overhead 13.8 us
+[  0.877559] CPU 11| <5> node-0 completed shuffle op 18 in 174.3 us (20.65/20.65 Gbps), benchmark overhead 12.1 us
+[  0.877762] CPU 11| <5> node-0 completed shuffle op 19 in 172.3 us (20.89/20.89 Gbps), benchmark overhead 12.8 us
+[  0.877767] CPU 11| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 49999, data dist. zipf-0.80, part. skewness 1.00, throughput 20.6 Gbps
+[  0.973789] CPU 11| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 0.90 --log
+[  1.116943] CPU 11| <5> shuffle matrix:
+[  1.116950] CPU 11| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  1.116958] CPU 11| <5>      0  1.00  1.01  0.99  1.02  0.99  1.01  1.00  0.99  0.97  1.02  1.05
+[  1.116965] CPU 11| <5>      1  0.99  0.99  1.01  1.00  1.00  0.98  0.99  1.02  0.97  1.05  1.08
+[  1.116972] CPU 11| <5>      2  0.99  0.99  1.01  0.98  1.00  1.03  1.02  0.98  0.96  1.02  1.07
+[  1.116979] CPU 11| <5>      3  0.99  1.01  0.98  1.00  0.99  1.00  1.01  1.00  0.99  1.04  1.06
+[  1.116986] CPU 11| <5>      4  0.99  1.01  1.01  1.01  1.01  0.99  0.99  1.00  0.98  1.01  1.03
+[  1.116992] CPU 11| <5>      5  1.01  1.01  0.98  1.00  1.01  1.00  0.98  1.00  0.98  1.03  1.05
+[  1.116999] CPU 11| <5>      6  1.01  1.02  1.00  0.99  1.00  1.00  0.99  1.00  0.96  1.03  1.08
+[  1.117006] CPU 11| <5>      7  1.01  0.99  1.01  0.99  1.03  0.99  1.01  0.97  0.98  1.02  1.06
+[  1.117012] CPU 11| <5>      8  1.00  1.00  0.98  0.98  1.00  1.00  1.01  1.02  1.05  0.96  1.09
+[  1.117019] CPU 11| <5>      9  1.01  0.98  1.02  1.02  0.97  0.99  1.00  1.03  1.15  0.83  1.39
+[  1.117025] CPU 11| <5>    M/m  1.03  1.04  1.03  1.04  1.06  1.06  1.04  1.06  1.20  1.27
+[  1.117026] CPU 11| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  1.117043] CPU 11| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  1.117044] CPU 11| <5> Outbound messages:  1.00  1.01  0.99  1.02  0.99  1.01  1.00  0.99  0.97  1.02    1.05
+[  1.117045] CPU 11| <5>  Inbound messages:  1.00  0.99  0.99  0.99  0.99  1.01  1.01  1.01  1.00  1.01    1.03
+[  1.174335] CPU 11| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  1.174856] CPU 11| <5> node-0 completed shuffle op 0 in 418.1 us (8.61/8.61 Gbps), benchmark overhead 10.8 us
+[  1.175063] CPU 12| <5> node-0 completed shuffle op 1 in 175.2 us (20.54/20.54 Gbps), benchmark overhead 13.7 us
+[  1.175271] CPU 01| <5> node-0 completed shuffle op 2 in 174.6 us (20.61/20.61 Gbps), benchmark overhead 13.7 us
+[  1.175478] CPU 01| <5> node-0 completed shuffle op 3 in 173.6 us (20.73/20.73 Gbps), benchmark overhead 13.4 us
+[  1.175685] CPU 11| <5> node-0 completed shuffle op 4 in 174.5 us (20.63/20.63 Gbps), benchmark overhead 14.2 us
+[  1.175927] CPU 12| <5> node-0 completed shuffle op 5 in 175.6 us (20.50/20.50 Gbps), benchmark overhead 11.4 us
+[  1.176132] CPU 01| <5> node-0 completed shuffle op 6 in 176.1 us (20.44/20.44 Gbps), benchmark overhead 10.8 us
+[  1.176337] CPU 01| <5> node-0 completed shuffle op 7 in 174.2 us (20.66/20.66 Gbps), benchmark overhead 12.6 us
+[  1.176542] CPU 01| <5> node-0 completed shuffle op 8 in 176.9 us (20.35/20.35 Gbps), benchmark overhead 9.9 us
+[  1.176747] CPU 12| <5> node-0 completed shuffle op 9 in 175.6 us (20.50/20.50 Gbps), benchmark overhead 11.2 us
+[  1.176952] CPU 12| <5> node-0 completed shuffle op 10 in 174.1 us (20.67/20.67 Gbps), benchmark overhead 12.2 us
+[  1.177158] CPU 12| <5> node-0 completed shuffle op 11 in 175.1 us (20.56/20.56 Gbps), benchmark overhead 13.5 us
+[  1.177362] CPU 02| <5> node-0 completed shuffle op 12 in 174.0 us (20.68/20.68 Gbps), benchmark overhead 12.4 us
+[  1.177568] CPU 02| <5> node-0 completed shuffle op 13 in 174.5 us (20.62/20.62 Gbps), benchmark overhead 13.0 us
+[  1.177772] CPU 01| <5> node-0 completed shuffle op 14 in 176.5 us (20.39/20.39 Gbps), benchmark overhead 10.4 us
+[  1.177979] CPU 01| <5> node-0 completed shuffle op 15 in 176.1 us (20.44/20.44 Gbps), benchmark overhead 12.4 us
+[  1.178183] CPU 11| <5> node-0 completed shuffle op 16 in 173.1 us (20.79/20.79 Gbps), benchmark overhead 12.9 us
+[  1.178391] CPU 01| <5> node-0 completed shuffle op 17 in 175.4 us (20.52/20.52 Gbps), benchmark overhead 12.4 us
+[  1.178595] CPU 01| <5> node-0 completed shuffle op 18 in 173.8 us (20.71/20.71 Gbps), benchmark overhead 12.8 us
+[  1.178801] CPU 12| <5> node-0 completed shuffle op 19 in 174.6 us (20.61/20.61 Gbps), benchmark overhead 13.1 us
+[  1.178807] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-0.90, part. skewness 1.00, throughput 20.6 Gbps
+[  1.274708] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.00 --log
+[  1.408831] CPU 12| <5> shuffle matrix:
+[  1.408838] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  1.408847] CPU 12| <5>      0  1.00  1.01  0.99  1.02  0.99  1.01  0.97  0.92  0.71  1.36  1.91
+[  1.408854] CPU 12| <5>      1  0.99  0.99  1.01  1.00  1.00  0.98  1.01  0.91  0.85  1.27  1.50
+[  1.408861] CPU 12| <5>      2  0.99  0.99  1.01  0.98  1.01  1.02  1.04  0.88  1.17  0.91  1.34
+[  1.408868] CPU 12| <5>      3  0.99  1.01  0.98  1.00  0.99  0.99  1.02  0.90  1.19  0.94  1.32
+[  1.408874] CPU 12| <5>      4  0.99  1.01  1.01  1.01  1.01  0.99  1.01  1.00  1.09  0.90  1.20
+[  1.408881] CPU 12| <5>      5  1.01  1.00  0.99  1.01  1.01  0.99  0.99  1.09  0.99  0.92  1.18
+[  1.408888] CPU 12| <5>      6  1.01  1.01  1.00  0.99  1.00  1.01  0.99  1.09  0.98  0.93  1.17
+[  1.408894] CPU 12| <5>      7  1.01  1.00  1.01  0.99  1.03  1.00  0.99  1.06  1.01  0.90  1.17
+[  1.408901] CPU 12| <5>      8  1.00  1.00  0.99  0.98  1.00  1.02  1.00  1.08  1.00  0.94  1.14
+[  1.408908] CPU 12| <5>      9  1.02  0.98  1.01  1.03  0.97  1.00  0.98  1.08  1.02  0.92  1.18
+[  1.408914] CPU 12| <5>    M/m  1.03  1.04  1.03  1.05  1.06  1.05  1.06  1.24  1.66  1.51
+[  1.408915] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  1.408932] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  1.408933] CPU 12| <5> Outbound messages:  1.00  1.01  0.99  1.02  0.99  1.01  0.97  0.92  0.71  1.36    1.91
+[  1.408934] CPU 12| <5>  Inbound messages:  1.00  0.99  0.99  0.99  0.99  1.01  1.01  1.01  1.00  1.02    1.03
+[  1.475274] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  1.475688] CPU 01| <5> node-0 completed shuffle op 0 in 227.4 us (15.83/15.83 Gbps), benchmark overhead 96.5 us
+[  1.475902] CPU 12| <5> node-0 completed shuffle op 1 in 178.2 us (20.20/20.20 Gbps), benchmark overhead 16.1 us
+[  1.476110] CPU 12| <5> node-0 completed shuffle op 2 in 175.9 us (20.46/20.46 Gbps), benchmark overhead 14.0 us
+[  1.476347] CPU 01| <5> node-0 completed shuffle op 3 in 175.0 us (20.57/20.57 Gbps), benchmark overhead 13.7 us
+[  1.476554] CPU 12| <5> node-0 completed shuffle op 4 in 174.7 us (20.60/20.60 Gbps), benchmark overhead 13.5 us
+[  1.476759] CPU 01| <5> node-0 completed shuffle op 5 in 175.0 us (20.57/20.57 Gbps), benchmark overhead 12.7 us
+[  1.476966] CPU 12| <5> node-0 completed shuffle op 6 in 174.4 us (20.64/20.64 Gbps), benchmark overhead 13.5 us
+[  1.477171] CPU 01| <5> node-0 completed shuffle op 7 in 171.9 us (20.94/20.94 Gbps), benchmark overhead 14.3 us
+[  1.477375] CPU 01| <5> node-0 completed shuffle op 8 in 174.6 us (20.61/20.61 Gbps), benchmark overhead 11.8 us
+[  1.477582] CPU 12| <5> node-0 completed shuffle op 9 in 175.6 us (20.50/20.50 Gbps), benchmark overhead 12.3 us
+[  1.477785] CPU 12| <5> node-0 completed shuffle op 10 in 173.7 us (20.72/20.72 Gbps), benchmark overhead 12.2 us
+[  1.477990] CPU 12| <5> node-0 completed shuffle op 11 in 176.1 us (20.44/20.44 Gbps), benchmark overhead 11.0 us
+[  1.478194] CPU 12| <5> node-0 completed shuffle op 12 in 174.0 us (20.69/20.69 Gbps), benchmark overhead 12.3 us
+[  1.478398] CPU 12| <5> node-0 completed shuffle op 13 in 173.6 us (20.73/20.73 Gbps), benchmark overhead 12.0 us
+[  1.478605] CPU 01| <5> node-0 completed shuffle op 14 in 177.2 us (20.31/20.31 Gbps), benchmark overhead 11.1 us
+[  1.478816] CPU 12| <5> node-0 completed shuffle op 15 in 178.7 us (20.15/20.15 Gbps), benchmark overhead 14.7 us
+[  1.479023] CPU 01| <5> node-0 completed shuffle op 16 in 174.4 us (20.64/20.64 Gbps), benchmark overhead 14.8 us
+[  1.479227] CPU 12| <5> node-0 completed shuffle op 17 in 176.2 us (20.43/20.43 Gbps), benchmark overhead 9.7 us
+[  1.479432] CPU 01| <5> node-0 completed shuffle op 18 in 176.5 us (20.39/20.39 Gbps), benchmark overhead 10.2 us
+[  1.479637] CPU 12| <5> node-0 completed shuffle op 19 in 175.9 us (20.46/20.46 Gbps), benchmark overhead 10.6 us
+[  1.479643] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.00, part. skewness 1.00, throughput 20.6 Gbps
+[  1.575651] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.10 --log
+[  1.711801] CPU 12| <5> shuffle matrix:
+[  1.711807] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  1.711816] CPU 12| <5>      0  1.00  1.01  0.99  1.01  1.00  0.99  0.95  0.97  0.66  1.41  2.15
+[  1.711823] CPU 12| <5>      1  0.99  1.00  1.01  0.99  1.00  0.96  0.94  1.00  0.67  1.44  2.17
+[  1.711830] CPU 12| <5>      2  0.99  0.99  1.01  0.98  1.00  1.01  0.97  0.96  0.66  1.43  2.18
+[  1.711837] CPU 12| <5>      3  0.99  1.01  0.98  0.99  0.99  0.98  0.95  0.99  0.66  1.46  2.20
+[  1.711844] CPU 12| <5>      4  0.99  1.01  1.01  1.00  1.00  0.97  0.95  0.98  0.68  1.41  2.09
+[  1.711850] CPU 12| <5>      5  1.01  1.01  0.99  1.01  1.00  0.98  0.93  0.98  0.68  1.42  2.10
+[  1.711857] CPU 12| <5>      6  1.01  1.01  1.00  1.00  0.99  0.98  0.96  0.97  0.66  1.43  2.18
+[  1.711864] CPU 12| <5>      7  1.01  1.00  1.02  0.99  1.02  1.04  1.12  0.72  2.08     0   inf
+[  1.711870] CPU 12| <5>      8  1.00  1.00  0.99  0.99  1.01  1.05  1.11  1.02  1.83     0   inf
+[  1.711876] CPU 12| <5>      9  1.02  0.98  1.01  1.03  0.99  1.03  1.11  1.40  1.43     0   inf
+[  1.711882] CPU 12| <5>    M/m  1.03  1.04  1.03  1.05  1.03  1.10  1.20  1.94  3.18   inf
+[  1.711883] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  1.711900] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  1.711901] CPU 12| <5> Outbound messages:  1.00  1.01  0.99  1.01  1.00  0.99  0.95  0.97  0.66  1.41    2.15
+[  1.711902] CPU 12| <5>  Inbound messages:  1.00  0.99  0.99  0.99  0.99  1.01  1.01  1.01  1.00  1.02    1.03
+[  1.776248] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  1.776575] CPU 01| <5> node-0 completed shuffle op 0 in 204.4 us (17.61/17.61 Gbps), benchmark overhead 30.4 us
+[  1.776822] CPU 01| <5> node-0 completed shuffle op 1 in 184.5 us (19.51/19.51 Gbps), benchmark overhead 12.8 us
+[  1.777045] CPU 01| <5> node-0 completed shuffle op 2 in 190.0 us (18.95/18.95 Gbps), benchmark overhead 14.8 us
+[  1.777267] CPU 01| <5> node-0 completed shuffle op 3 in 190.9 us (18.86/18.86 Gbps), benchmark overhead 13.7 us
+[  1.777482] CPU 01| <5> node-0 completed shuffle op 4 in 183.0 us (19.67/19.67 Gbps), benchmark overhead 13.9 us
+[  1.777702] CPU 01| <5> node-0 completed shuffle op 5 in 187.2 us (19.23/19.23 Gbps), benchmark overhead 14.5 us
+[  1.777919] CPU 01| <5> node-0 completed shuffle op 6 in 186.9 us (19.26/19.26 Gbps), benchmark overhead 13.4 us
+[  1.778136] CPU 01| <5> node-0 completed shuffle op 7 in 185.3 us (19.43/19.43 Gbps), benchmark overhead 14.2 us
+[  1.778353] CPU 01| <5> node-0 completed shuffle op 8 in 185.1 us (19.44/19.44 Gbps), benchmark overhead 14.0 us
+[  1.778569] CPU 01| <5> node-0 completed shuffle op 9 in 183.7 us (19.59/19.59 Gbps), benchmark overhead 15.2 us
+[  1.778789] CPU 01| <5> node-0 completed shuffle op 10 in 189.3 us (19.02/19.02 Gbps), benchmark overhead 12.7 us
+[  1.779005] CPU 01| <5> node-0 completed shuffle op 11 in 184.7 us (19.49/19.49 Gbps), benchmark overhead 12.5 us
+[  1.779224] CPU 01| <5> node-0 completed shuffle op 12 in 186.6 us (19.29/19.29 Gbps), benchmark overhead 14.8 us
+[  1.779441] CPU 01| <5> node-0 completed shuffle op 13 in 185.4 us (19.41/19.41 Gbps), benchmark overhead 14.4 us
+[  1.779656] CPU 01| <5> node-0 completed shuffle op 14 in 185.4 us (19.42/19.42 Gbps), benchmark overhead 12.4 us
+[  1.779878] CPU 01| <5> node-0 completed shuffle op 15 in 188.8 us (19.06/19.06 Gbps), benchmark overhead 14.1 us
+[  1.780100] CPU 01| <5> node-0 completed shuffle op 16 in 190.5 us (18.90/18.90 Gbps), benchmark overhead 14.3 us
+[  1.780321] CPU 01| <5> node-0 completed shuffle op 17 in 189.2 us (19.03/19.03 Gbps), benchmark overhead 13.7 us
+[  1.780707] CPU 12| <5> node-0 completed shuffle op 18 in 355.7 us (10.12/10.12 Gbps), benchmark overhead 13.3 us
+[  1.780927] CPU 01| <5> node-0 completed shuffle op 19 in 186.9 us (19.27/19.27 Gbps), benchmark overhead 13.4 us
+[  1.780933] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.10, part. skewness 1.00, throughput 19.3 Gbps
+[  1.876570] CPU 01| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.20 --log
+[  2.013217] CPU 01| <5> shuffle matrix:
+[  2.013224] CPU 01| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  2.013233] CPU 01| <5>      0  1.00  1.01  0.98  1.01  0.96  0.94  0.69  1.41     0  2.00   inf
+[  2.013240] CPU 01| <5>      1  0.99  1.00  1.00  0.99  1.03  0.85  0.79  1.32     0  2.04   inf
+[  2.013246] CPU 01| <5>      2  0.99  0.99  1.01  0.97  1.02  0.90  1.25  0.87     0  2.00   inf
+[  2.013253] CPU 01| <5>      3  0.99  1.01  0.99  0.97  1.02  0.87  1.23  0.88     0  2.04   inf
+[  2.013260] CPU 01| <5>      4  0.99  1.01  1.01  0.99  1.03  0.87  1.22  0.88  0.10  1.92 18.53
+[  2.013267] CPU 01| <5>      5  1.01  1.00  0.99  1.00  1.02  0.94  1.13  0.89  2.02     0   inf
+[  2.013273] CPU 01| <5>      6  1.01  1.01  1.00  1.01  0.98  1.17  0.92  0.88  2.02     0   inf
+[  2.013279] CPU 01| <5>      7  1.00  1.00  1.01  1.01  1.01  1.16  0.92  0.87  2.02     0   inf
+[  2.013285] CPU 01| <5>      8  1.00  1.00  0.99  1.01  0.98  1.16  0.94  0.89  2.04     0   inf
+[  2.013291] CPU 01| <5>      9  1.02  0.97  1.01  1.05  0.96  1.14  0.92  1.11  1.81     0   inf
+[  2.013297] CPU 01| <5>    M/m  1.04  1.04  1.04  1.08  1.08  1.38  1.81  1.62   inf   inf
+[  2.013298] CPU 01| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  2.013315] CPU 01| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  2.013316] CPU 01| <5> Outbound messages:  1.00  1.01  0.98  1.01  0.96  0.94  0.69  1.41  0.00  2.00     inf
+[  2.013317] CPU 01| <5>  Inbound messages:  1.00  0.99  0.99  0.99  0.99  1.01  1.01  1.00  1.00  1.02    1.04
+[  2.077124] CPU 01| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  2.077442] CPU 12| <5> node-0 completed shuffle op 0 in 218.4 us (16.49/16.49 Gbps), benchmark overhead 11.7 us
+[  2.077660] CPU 01| <5> node-0 completed shuffle op 1 in 185.0 us (19.46/19.46 Gbps), benchmark overhead 14.0 us
+[  2.077880] CPU 01| <5> node-0 completed shuffle op 2 in 187.2 us (19.23/19.23 Gbps), benchmark overhead 13.0 us
+[  2.078097] CPU 01| <5> node-0 completed shuffle op 3 in 183.5 us (19.62/19.62 Gbps), benchmark overhead 15.5 us
+[  2.078313] CPU 01| <5> node-0 completed shuffle op 4 in 185.9 us (19.36/19.36 Gbps), benchmark overhead 12.4 us
+[  2.078533] CPU 01| <5> node-0 completed shuffle op 5 in 188.2 us (19.13/19.13 Gbps), benchmark overhead 13.7 us
+[  2.078749] CPU 01| <5> node-0 completed shuffle op 6 in 184.0 us (19.56/19.56 Gbps), benchmark overhead 13.7 us
+[  2.078971] CPU 01| <5> node-0 completed shuffle op 7 in 191.1 us (18.84/18.84 Gbps), benchmark overhead 13.2 us
+[  2.079189] CPU 01| <5> node-0 completed shuffle op 8 in 186.5 us (19.30/19.30 Gbps), benchmark overhead 14.1 us
+[  2.079405] CPU 01| <5> node-0 completed shuffle op 9 in 184.6 us (19.50/19.50 Gbps), benchmark overhead 12.9 us
+[  2.079622] CPU 01| <5> node-0 completed shuffle op 10 in 186.6 us (19.30/19.30 Gbps), benchmark overhead 13.2 us
+[  2.079844] CPU 01| <5> node-0 completed shuffle op 11 in 186.5 us (19.30/19.30 Gbps), benchmark overhead 18.2 us
+[  2.080060] CPU 01| <5> node-0 completed shuffle op 12 in 184.2 us (19.54/19.54 Gbps), benchmark overhead 13.3 us
+[  2.080275] CPU 01| <5> node-0 completed shuffle op 13 in 185.9 us (19.36/19.36 Gbps), benchmark overhead 12.0 us
+[  2.080494] CPU 01| <5> node-0 completed shuffle op 14 in 187.2 us (19.23/19.23 Gbps), benchmark overhead 14.0 us
+[  2.080722] CPU 01| <5> node-0 completed shuffle op 15 in 195.7 us (18.40/18.40 Gbps), benchmark overhead 14.8 us
+[  2.080940] CPU 01| <5> node-0 completed shuffle op 16 in 183.6 us (19.61/19.61 Gbps), benchmark overhead 16.8 us
+[  2.081154] CPU 01| <5> node-0 completed shuffle op 17 in 184.5 us (19.51/19.51 Gbps), benchmark overhead 12.1 us
+[  2.081376] CPU 01| <5> node-0 completed shuffle op 18 in 190.8 us (18.87/18.87 Gbps), benchmark overhead 13.8 us
+[  2.081599] CPU 01| <5> node-0 completed shuffle op 19 in 191.2 us (18.83/18.83 Gbps), benchmark overhead 13.3 us
+[  2.081604] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.20, part. skewness 1.00, throughput 19.3 Gbps
+[  2.177489] CPU 01| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.30 --log
+[  2.312826] CPU 01| <5> shuffle matrix:
+[  2.312832] CPU 01| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  2.312841] CPU 01| <5>      0  1.00  1.01  0.96  0.99  0.92  0.78  0.64  1.07     0  2.62   inf
+[  2.312848] CPU 01| <5>      1  0.98  1.00  0.98  0.97  0.93  0.75  0.63  1.10     0  2.66   inf
+[  2.312854] CPU 01| <5>      2  0.99  0.99  1.00  0.94  0.92  0.78  0.67  1.08     0  2.63   inf
+[  2.312861] CPU 01| <5>      3  0.99  1.00  1.00  0.92  0.93  0.76  1.49  0.24  0.59  2.08  8.74
+[  2.312867] CPU 01| <5>      4  0.99  1.01  1.02  0.93  0.93  1.28  1.20     0  2.65     0   inf
+[  2.312873] CPU 01| <5>      5  1.01  1.00  1.00  1.00  0.91  1.37  1.05     0  2.66     0   inf
+[  2.312879] CPU 01| <5>      6  1.01  1.01  1.01  1.05  1.11  1.07  1.09     0  2.64     0   inf
+[  2.312884] CPU 01| <5>      7  1.00  0.99  1.03  1.06  1.15  1.07  1.08  1.17  1.46     0   inf
+[  2.312890] CPU 01| <5>      8  1.00  1.01  0.99  1.05  1.12  1.08  1.09  2.67     0     0   inf
+[  2.312896] CPU 01| <5>      9  1.02  0.98  1.02  1.09  1.09  1.05  1.08  2.67     0     0   inf
+[  2.312902] CPU 01| <5>    M/m  1.04  1.03  1.07  1.18  1.27  1.84  2.37   inf   inf   inf
+[  2.312903] CPU 01| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  2.312919] CPU 01| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  2.312940] CPU 01| <5> Outbound messages:  1.00  1.01  0.96  0.99  0.92  0.78  0.64  1.07  0.00  2.62     inf
+[  2.312941] CPU 01| <5>  Inbound messages:  1.00  0.98  0.99  0.99  0.99  1.01  1.01  1.00  1.00  1.02    1.04
+[  2.378047] CPU 01| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  2.378388] CPU 02| <5> node-0 completed shuffle op 0 in 196.9 us (18.29/18.29 Gbps), benchmark overhead 56.8 us
+[  2.378608] CPU 01| <5> node-0 completed shuffle op 1 in 186.2 us (19.33/19.33 Gbps), benchmark overhead 14.4 us
+[  2.378830] CPU 01| <5> node-0 completed shuffle op 2 in 186.3 us (19.32/19.32 Gbps), benchmark overhead 15.3 us
+[  2.379046] CPU 01| <5> node-0 completed shuffle op 3 in 185.0 us (19.46/19.46 Gbps), benchmark overhead 13.2 us
+[  2.379262] CPU 01| <5> node-0 completed shuffle op 4 in 185.3 us (19.43/19.43 Gbps), benchmark overhead 12.5 us
+[  2.379478] CPU 12| <5> node-0 completed shuffle op 5 in 184.0 us (19.56/19.56 Gbps), benchmark overhead 14.4 us
+[  2.379697] CPU 02| <5> node-0 completed shuffle op 6 in 185.4 us (19.41/19.41 Gbps), benchmark overhead 15.2 us
+[  2.379912] CPU 01| <5> node-0 completed shuffle op 7 in 183.9 us (19.57/19.57 Gbps), benchmark overhead 13.2 us
+[  2.380130] CPU 01| <5> node-0 completed shuffle op 8 in 186.8 us (19.27/19.27 Gbps), benchmark overhead 12.5 us
+[  2.380351] CPU 01| <5> node-0 completed shuffle op 9 in 189.8 us (18.96/18.96 Gbps), benchmark overhead 14.1 us
+[  2.380570] CPU 01| <5> node-0 completed shuffle op 10 in 187.7 us (19.18/19.18 Gbps), benchmark overhead 13.2 us
+[  2.380788] CPU 01| <5> node-0 completed shuffle op 11 in 185.3 us (19.43/19.43 Gbps), benchmark overhead 14.0 us
+[  2.381004] CPU 01| <5> node-0 completed shuffle op 12 in 185.3 us (19.42/19.42 Gbps), benchmark overhead 13.5 us
+[  2.381223] CPU 01| <5> node-0 completed shuffle op 13 in 188.5 us (19.09/19.09 Gbps), benchmark overhead 12.4 us
+[  2.381439] CPU 01| <5> node-0 completed shuffle op 14 in 186.2 us (19.33/19.33 Gbps), benchmark overhead 12.3 us
+[  2.381655] CPU 01| <5> node-0 completed shuffle op 15 in 184.7 us (19.49/19.49 Gbps), benchmark overhead 13.0 us
+[  2.381869] CPU 01| <5> node-0 completed shuffle op 16 in 184.0 us (19.56/19.56 Gbps), benchmark overhead 13.0 us
+[  2.382086] CPU 01| <5> node-0 completed shuffle op 17 in 186.8 us (19.27/19.27 Gbps), benchmark overhead 13.4 us
+[  2.382300] CPU 01| <5> node-0 completed shuffle op 18 in 183.7 us (19.60/19.60 Gbps), benchmark overhead 12.2 us
+[  2.382519] CPU 01| <5> node-0 completed shuffle op 19 in 184.4 us (19.52/19.52 Gbps), benchmark overhead 13.9 us
+[  2.382524] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.30, part. skewness 1.00, throughput 19.4 Gbps
+[  2.478420] CPU 01| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.40 --log
+[  2.613030] CPU 01| <5> shuffle matrix:
+[  2.613037] CPU 01| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  2.613045] CPU 01| <5>      0  1.00  0.99  0.94  1.06  0.81  0.71  1.26     0     0  3.23   inf
+[  2.613052] CPU 01| <5>      1  0.98  1.00  0.93  1.04  0.81  0.68  1.24     0     0  3.31   inf
+[  2.613058] CPU 01| <5>      2  0.99  1.00  0.93  1.04  0.80  0.72  1.28     0     0  3.24   inf
+[  2.613064] CPU 01| <5>      3  0.99  1.01  0.94  1.01  0.81  0.69  1.24     0  3.09  0.22   inf
+[  2.613070] CPU 01| <5>      4  0.99  1.01  1.05  0.94  0.81  0.71  1.22     0  3.27     0   inf
+[  2.613076] CPU 01| <5>      5  1.01  1.00  1.03  0.94  0.82  0.88  1.04     0  3.27     0   inf
+[  2.613082] CPU 01| <5>      6  1.01  1.01  1.04  0.93  0.84  1.89     0  2.90  0.37     0   inf
+[  2.613088] CPU 01| <5>      7  1.01  1.00  1.05  0.93  1.54  1.24     0  3.24     0     0   inf
+[  2.613093] CPU 01| <5>      8  1.00  1.00  1.02  0.93  1.50  1.26     0  3.29     0     0   inf
+[  2.613099] CPU 01| <5>      9  1.02  0.98  1.06  1.19  1.24  1.22  2.72  0.57     0     0   inf
+[  2.613124] CPU 01| <5>    M/m  1.04  1.04  1.13  1.29  1.92  2.77   inf   inf   inf   inf
+[  2.613125] CPU 01| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  2.613142] CPU 01| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  2.613143] CPU 01| <5> Outbound messages:  1.00  0.99  0.94  1.06  0.81  0.71  1.26  0.00  0.00  3.23     inf
+[  2.613144] CPU 01| <5>  Inbound messages:  1.00  0.98  0.99  0.99  0.99  1.01  1.01  1.01  1.00  1.02    1.04
+[  2.678976] CPU 01| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  2.679332] CPU 01| <5> node-0 completed shuffle op 0 in 237.4 us (15.17/15.17 Gbps), benchmark overhead 16.3 us
+[  2.679556] CPU 12| <5> node-0 completed shuffle op 1 in 185.1 us (19.45/19.45 Gbps), benchmark overhead 19.9 us
+[  2.679781] CPU 01| <5> node-0 completed shuffle op 2 in 189.0 us (19.05/19.05 Gbps), benchmark overhead 16.7 us
+[  2.680005] CPU 01| <5> node-0 completed shuffle op 3 in 191.7 us (18.78/18.78 Gbps), benchmark overhead 14.6 us
+[  2.680225] CPU 12| <5> node-0 completed shuffle op 4 in 185.3 us (19.42/19.42 Gbps), benchmark overhead 16.4 us
+[  2.680463] CPU 12| <5> node-0 completed shuffle op 5 in 194.9 us (18.47/18.47 Gbps), benchmark overhead 25.5 us
+[  2.680688] CPU 01| <5> node-0 completed shuffle op 6 in 193.2 us (18.64/18.64 Gbps), benchmark overhead 14.4 us
+[  2.680910] CPU 02| <5> node-0 completed shuffle op 7 in 188.9 us (19.06/19.06 Gbps), benchmark overhead 14.6 us
+[  2.681139] CPU 01| <5> node-0 completed shuffle op 8 in 194.1 us (18.55/18.55 Gbps), benchmark overhead 16.1 us
+[  2.681359] CPU 12| <5> node-0 completed shuffle op 9 in 184.7 us (19.49/19.49 Gbps), benchmark overhead 17.9 us
+[  2.681579] CPU 01| <5> node-0 completed shuffle op 10 in 188.6 us (19.09/19.09 Gbps), benchmark overhead 13.7 us
+[  2.681800] CPU 01| <5> node-0 completed shuffle op 11 in 188.8 us (19.06/19.06 Gbps), benchmark overhead 14.4 us
+[  2.682019] CPU 12| <5> node-0 completed shuffle op 12 in 184.7 us (19.49/19.49 Gbps), benchmark overhead 15.9 us
+[  2.682237] CPU 02| <5> node-0 completed shuffle op 13 in 185.8 us (19.37/19.37 Gbps), benchmark overhead 14.5 us
+[  2.682460] CPU 12| <5> node-0 completed shuffle op 14 in 185.5 us (19.40/19.40 Gbps), benchmark overhead 19.9 us
+[  2.682679] CPU 01| <5> node-0 completed shuffle op 15 in 186.1 us (19.35/19.35 Gbps), benchmark overhead 15.9 us
+[  2.682902] CPU 01| <5> node-0 completed shuffle op 16 in 189.0 us (19.05/19.05 Gbps), benchmark overhead 15.6 us
+[  2.683124] CPU 01| <5> node-0 completed shuffle op 17 in 188.9 us (19.06/19.06 Gbps), benchmark overhead 14.5 us
+[  2.683344] CPU 12| <5> node-0 completed shuffle op 18 in 186.0 us (19.36/19.36 Gbps), benchmark overhead 16.6 us
+[  2.683567] CPU 12| <5> node-0 completed shuffle op 19 in 188.3 us (19.12/19.12 Gbps), benchmark overhead 17.5 us
+[  2.683573] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.40, part. skewness 1.00, throughput 19.1 Gbps
+[  2.779355] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.50 --log
+[  2.924846] CPU 12| <5> shuffle matrix:
+[  2.924853] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  2.924862] CPU 12| <5>      0  0.99  0.99  0.98  0.69  1.15     0  1.38     0     0  3.82   inf
+[  2.924868] CPU 12| <5>      1  0.98  0.98  1.00  1.08  0.74  1.28  0.06     0     0  3.89   inf
+[  2.924875] CPU 12| <5>      2  0.99  0.96  0.99  1.07  0.73  1.41     0     0  1.55  2.29   inf
+[  2.924881] CPU 12| <5>      3  0.99  0.97  0.97  1.08  0.73  1.36     0     0  3.89     0   inf
+[  2.924886] CPU 12| <5>      4  0.99  0.98  1.00  1.09  0.74  1.35     0     0  3.85     0   inf
+[  2.924892] CPU 12| <5>      5  1.01  0.98  0.97  1.09  0.75  1.36     0  3.13  0.71     0   inf
+[  2.924898] CPU 12| <5>      6  1.01  1.04  0.93  1.07  0.73  1.37     0  3.84     0     0   inf
+[  2.924904] CPU 12| <5>      7  1.01  1.04  0.92  1.07  0.76  1.37  0.80  3.03     0     0   inf
+[  2.924933] CPU 12| <5>      8  1.00  1.04  1.04  0.93  1.59  0.50  3.90     0     0     0   inf
+[  2.924938] CPU 12| <5>      9  1.02  1.02  1.20  0.83  2.06     0  3.86     0     0     0   inf
+[  2.924943] CPU 12| <5>    M/m  1.05  1.08  1.29  1.59  2.81   inf   inf   inf   inf   inf
+[  2.924944] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  2.924962] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  2.924963] CPU 12| <5> Outbound messages:  0.99  0.99  0.98  0.69  1.15  0.00  1.38  0.00  0.00  3.82     inf
+[  2.924964] CPU 12| <5>  Inbound messages:  0.99  0.98  0.99  0.99  0.99  1.01  1.01  1.01  1.00  1.02    1.05
+[  2.979916] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  2.980255] CPU 12| <5> node-0 completed shuffle op 0 in 203.0 us (17.75/17.75 Gbps), benchmark overhead 49.7 us
+[  2.980517] CPU 12| <5> node-0 completed shuffle op 1 in 203.2 us (17.73/17.73 Gbps), benchmark overhead 14.6 us
+[  2.980752] CPU 12| <5> node-0 completed shuffle op 2 in 200.0 us (18.02/18.02 Gbps), benchmark overhead 18.2 us
+[  2.980980] CPU 12| <5> node-0 completed shuffle op 3 in 193.1 us (18.65/18.65 Gbps), benchmark overhead 17.0 us
+[  2.981209] CPU 12| <5> node-0 completed shuffle op 4 in 198.4 us (18.16/18.16 Gbps), benchmark overhead 13.2 us
+[  2.981439] CPU 12| <5> node-0 completed shuffle op 5 in 196.9 us (18.29/18.29 Gbps), benchmark overhead 16.6 us
+[  2.981672] CPU 12| <5> node-0 completed shuffle op 6 in 198.7 us (18.13/18.13 Gbps), benchmark overhead 17.0 us
+[  2.981903] CPU 12| <5> node-0 completed shuffle op 7 in 199.4 us (18.06/18.06 Gbps), benchmark overhead 13.6 us
+[  2.982141] CPU 12| <5> node-0 completed shuffle op 8 in 198.9 us (18.12/18.12 Gbps), benchmark overhead 21.7 us
+[  2.982375] CPU 12| <5> node-0 completed shuffle op 9 in 194.7 us (18.51/18.51 Gbps), benchmark overhead 21.6 us
+[  2.982608] CPU 12| <5> node-0 completed shuffle op 10 in 203.4 us (17.71/17.71 Gbps), benchmark overhead 11.6 us
+[  2.982837] CPU 12| <5> node-0 completed shuffle op 11 in 198.9 us (18.11/18.11 Gbps), benchmark overhead 13.5 us
+[  2.983069] CPU 12| <5> node-0 completed shuffle op 12 in 190.9 us (18.87/18.87 Gbps), benchmark overhead 23.4 us
+[  2.983301] CPU 12| <5> node-0 completed shuffle op 13 in 197.7 us (18.22/18.22 Gbps), benchmark overhead 16.5 us
+[  2.983534] CPU 12| <5> node-0 completed shuffle op 14 in 203.4 us (17.71/17.71 Gbps), benchmark overhead 12.7 us
+[  2.983768] CPU 12| <5> node-0 completed shuffle op 15 in 203.3 us (17.72/17.72 Gbps), benchmark overhead 13.3 us
+[  2.984005] CPU 12| <5> node-0 completed shuffle op 16 in 205.2 us (17.55/17.55 Gbps), benchmark overhead 15.0 us
+[  2.984235] CPU 12| <5> node-0 completed shuffle op 17 in 197.3 us (18.26/18.26 Gbps), benchmark overhead 15.2 us
+[  2.984463] CPU 12| <5> node-0 completed shuffle op 18 in 197.2 us (18.27/18.27 Gbps), benchmark overhead 13.8 us
+[  2.984703] CPU 12| <5> node-0 completed shuffle op 19 in 197.4 us (18.25/18.25 Gbps), benchmark overhead 25.4 us
+[  2.984709] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.50, part. skewness 1.00, throughput 18.1 Gbps
+[  3.080283] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.60 --log
+[  3.219884] CPU 12| <5> shuffle matrix:
+[  3.219891] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  3.219899] CPU 12| <5>      0  0.98  0.99  0.96  0.48  0.77  1.45     0     0     0  4.36   inf
+[  3.219905] CPU 12| <5>      1  0.99  1.00  0.94  0.47  0.76  1.43     0     0     0  4.42   inf
+[  3.219911] CPU 12| <5>      2  0.99  0.99  0.93  1.13  0.08  1.47     0     0  3.18  1.22   inf
+[  3.219917] CPU 12| <5>      3  0.99  1.01  0.91  1.23     0  1.43     0     0  4.43     0   inf
+[  3.219923] CPU 12| <5>      4  1.00  1.01  0.94  1.23  1.15  0.29     0  1.99  2.39     0   inf
+[  3.219928] CPU 12| <5>      5  1.01  1.00  0.92  1.24  1.46     0     0  4.37     0     0   inf
+[  3.219954] CPU 12| <5>      6  1.01  1.02  0.93  1.21  1.44     0  0.75  3.64     0     0   inf
+[  3.219960] CPU 12| <5>      7  1.01  1.00  0.93  1.23  1.47     0  4.36     0     0     0   inf
+[  3.219965] CPU 12| <5>      8  1.00  1.00  1.13  1.00  1.44     0  4.43     0     0     0   inf
+[  3.219971] CPU 12| <5>      9  1.02  0.98  1.43  0.76  1.43  3.93  0.45     0     0     0   inf
+[  3.219976] CPU 12| <5>    M/m  1.04  1.04  1.57  2.62   inf   inf   inf   inf   inf   inf
+[  3.219977] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  3.219994] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  3.219995] CPU 12| <5> Outbound messages:  0.98  0.99  0.96  0.48  0.77  1.45  0.00  0.00  0.00  4.36     inf
+[  3.219996] CPU 12| <5>  Inbound messages:  0.98  0.99  0.99  0.99  1.00  1.01  1.01  1.01  1.00  1.02    1.04
+[  3.280790] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  3.281181] CPU 01| <5> node-0 completed shuffle op 0 in 224.4 us (16.07/16.07 Gbps), benchmark overhead 61.9 us
+[  3.281431] CPU 12| <5> node-0 completed shuffle op 1 in 216.0 us (16.70/16.70 Gbps), benchmark overhead 13.7 us
+[  3.281682] CPU 12| <5> node-0 completed shuffle op 2 in 220.4 us (16.36/16.36 Gbps), benchmark overhead 11.9 us
+[  3.281933] CPU 12| <5> node-0 completed shuffle op 3 in 221.4 us (16.29/16.29 Gbps), benchmark overhead 11.5 us
+[  3.282179] CPU 12| <5> node-0 completed shuffle op 4 in 219.7 us (16.41/16.41 Gbps), benchmark overhead 9.1 us
+[  3.282458] CPU 01| <5> node-0 completed shuffle op 5 in 219.3 us (16.45/16.45 Gbps), benchmark overhead 12.3 us
+[  3.282706] CPU 12| <5> node-0 completed shuffle op 6 in 214.0 us (16.85/16.85 Gbps), benchmark overhead 16.2 us
+[  3.282953] CPU 12| <5> node-0 completed shuffle op 7 in 217.2 us (16.61/16.61 Gbps), benchmark overhead 11.6 us
+[  3.283208] CPU 12| <5> node-0 completed shuffle op 8 in 220.5 us (16.36/16.36 Gbps), benchmark overhead 13.0 us
+[  3.283458] CPU 12| <5> node-0 completed shuffle op 9 in 221.3 us (16.30/16.30 Gbps), benchmark overhead 10.9 us
+[  3.283710] CPU 12| <5> node-0 completed shuffle op 10 in 223.5 us (16.14/16.14 Gbps), benchmark overhead 10.7 us
+[  3.283956] CPU 12| <5> node-0 completed shuffle op 11 in 216.3 us (16.67/16.67 Gbps), benchmark overhead 11.6 us
+[  3.284203] CPU 12| <5> node-0 completed shuffle op 12 in 216.2 us (16.69/16.69 Gbps), benchmark overhead 13.6 us
+[  3.284451] CPU 12| <5> node-0 completed shuffle op 13 in 213.9 us (16.86/16.86 Gbps), benchmark overhead 16.1 us
+[  3.284701] CPU 12| <5> node-0 completed shuffle op 14 in 222.3 us (16.23/16.23 Gbps), benchmark overhead 9.9 us
+[  3.284947] CPU 12| <5> node-0 completed shuffle op 15 in 218.7 us (16.49/16.49 Gbps), benchmark overhead 10.8 us
+[  3.285193] CPU 12| <5> node-0 completed shuffle op 16 in 219.2 us (16.46/16.46 Gbps), benchmark overhead 8.8 us
+[  3.285442] CPU 12| <5> node-0 completed shuffle op 17 in 222.7 us (16.20/16.20 Gbps), benchmark overhead 9.8 us
+[  3.285687] CPU 12| <5> node-0 completed shuffle op 18 in 212.4 us (16.98/16.98 Gbps), benchmark overhead 14.8 us
+[  3.285938] CPU 12| <5> node-0 completed shuffle op 19 in 218.6 us (16.50/16.50 Gbps), benchmark overhead 14.2 us
+[  3.285943] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.60, part. skewness 1.00, throughput 16.5 Gbps
+[  3.381165] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.70 --log
+[  3.518093] CPU 12| <5> shuffle matrix:
+[  3.518100] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  3.518108] CPU 12| <5>      0  0.97  0.91  1.00  0.75  0.37  1.13     0     0     0  4.88   inf
+[  3.518114] CPU 12| <5>      1  0.96  0.89  1.00  0.76  1.49     0     0     0     0  4.90   inf
+[  3.518120] CPU 12| <5>      2  0.97  0.88  1.01  0.75  1.49     0     0     0  4.68  0.22   inf
+[  3.518126] CPU 12| <5>      3  1.00  0.85  0.99  0.75  1.49     0     0     0  4.92     0   inf
+[  3.518152] CPU 12| <5>      4  1.01  1.03  0.85  0.74  1.50     0     0  4.47  0.40     0   inf
+[  3.518157] CPU 12| <5>      5  1.02  1.09  0.76  0.75  1.52     0     0  4.86     0     0   inf
+[  3.518163] CPU 12| <5>      6  1.02  1.10  0.77  0.75  1.48     0  4.21  0.67     0     0   inf
+[  3.518169] CPU 12| <5>      7  1.01  1.09  0.78  1.60  0.67     0  4.86     0     0     0   inf
+[  3.518174] CPU 12| <5>      8  1.01  1.09  1.29  1.68     0  4.00  0.93     0     0     0   inf
+[  3.518179] CPU 12| <5>      9  1.03  1.07  1.55  1.47     0  4.87     0     0     0     0   inf
+[  3.518184] CPU 12| <5>    M/m  1.08  1.29  2.03  2.27   inf   inf   inf   inf   inf   inf
+[  3.518185] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  3.518203] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  3.518204] CPU 12| <5> Outbound messages:  0.97  0.91  1.00  0.75  0.37  1.13  0.00  0.00  0.00  4.88     inf
+[  3.518204] CPU 12| <5>  Inbound messages:  0.97  0.96  0.97  1.00  1.01  1.02  1.02  1.01  1.01  1.03    1.08
+[  3.581723] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  3.582075] CPU 12| <5> node-0 completed shuffle op 0 in 247.2 us (14.61/14.61 Gbps), benchmark overhead 16.6 us
+[  3.582347] CPU 12| <5> node-0 completed shuffle op 1 in 234.4 us (15.41/15.41 Gbps), benchmark overhead 19.6 us
+[  3.582620] CPU 12| <5> node-0 completed shuffle op 2 in 239.4 us (15.09/15.09 Gbps), benchmark overhead 16.0 us
+[  3.582894] CPU 12| <5> node-0 completed shuffle op 3 in 235.3 us (15.36/15.36 Gbps), benchmark overhead 21.2 us
+[  3.583163] CPU 12| <5> node-0 completed shuffle op 4 in 233.1 us (15.50/15.50 Gbps), benchmark overhead 17.7 us
+[  3.583441] CPU 12| <5> node-0 completed shuffle op 5 in 240.0 us (15.05/15.05 Gbps), benchmark overhead 20.4 us
+[  3.583853] CPU 12| <5> node-0 completed shuffle op 6 in 334.4 us (10.80/10.80 Gbps), benchmark overhead 60.8 us
+[  3.584128] CPU 12| <5> node-0 completed shuffle op 7 in 233.7 us (15.46/15.46 Gbps), benchmark overhead 23.0 us
+[  3.584399] CPU 12| <5> node-0 completed shuffle op 8 in 232.1 us (15.57/15.57 Gbps), benchmark overhead 21.9 us
+[  3.584699] CPU 12| <5> node-0 completed shuffle op 9 in 247.2 us (14.62/14.62 Gbps), benchmark overhead 12.4 us
+[  3.584968] CPU 12| <5> node-0 completed shuffle op 10 in 232.2 us (15.56/15.56 Gbps), benchmark overhead 19.8 us
+[  3.585230] CPU 12| <5> node-0 completed shuffle op 11 in 227.0 us (15.92/15.92 Gbps), benchmark overhead 17.1 us
+[  3.585505] CPU 12| <5> node-0 completed shuffle op 12 in 239.7 us (15.07/15.07 Gbps), benchmark overhead 18.2 us
+[  3.585776] CPU 02| <5> node-0 completed shuffle op 13 in 232.7 us (15.53/15.53 Gbps), benchmark overhead 20.3 us
+[  3.586142] CPU 11| <5> node-0 completed shuffle op 14 in 298.3 us (12.11/12.11 Gbps), benchmark overhead 47.6 us
+[  3.586419] CPU 12| <5> node-0 completed shuffle op 15 in 239.4 us (15.09/15.09 Gbps), benchmark overhead 17.4 us
+[  3.586687] CPU 12| <5> node-0 completed shuffle op 16 in 229.6 us (15.74/15.74 Gbps), benchmark overhead 20.8 us
+[  3.586961] CPU 12| <5> node-0 completed shuffle op 17 in 238.2 us (15.16/15.16 Gbps), benchmark overhead 18.5 us
+[  3.587233] CPU 12| <5> node-0 completed shuffle op 18 in 231.3 us (15.62/15.62 Gbps), benchmark overhead 23.3 us
+[  3.587502] CPU 12| <5> node-0 completed shuffle op 19 in 227.8 us (15.86/15.86 Gbps), benchmark overhead 24.5 us
+[  3.587508] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.70, part. skewness 1.00, throughput 15.4 Gbps
+[  3.682091] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.80 --log
+[  3.823348] CPU 12| <5> shuffle matrix:
+[  3.823355] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  3.823363] CPU 12| <5>      0  0.96  1.04  0.44  0.73  1.54     0     0     0     0  5.31   inf
+[  3.823390] CPU 12| <5>      1  0.99  0.98  0.43  0.74  1.53     0     0     0  0.64  4.69   inf
+[  3.823397] CPU 12| <5>      2  0.99  0.97  1.14  0.04  1.50     0     0     0  5.35     0   inf
+[  3.823402] CPU 12| <5>      3  0.99  0.98  1.15     0  1.51     0     0  1.35  4.01     0   inf
+[  3.823408] CPU 12| <5>      4  1.00  0.98  1.17  0.87  0.66     0     0  5.31     0     0   inf
+[  3.823413] CPU 12| <5>      5  1.01  0.98  1.15  1.54     0     0  1.98  3.33     0     0   inf
+[  3.823418] CPU 12| <5>      6  1.01  0.99  1.17  1.51     0     0  5.32     0     0     0   inf
+[  3.823424] CPU 12| <5>      7  1.01  0.98  1.17  1.53     0  2.60  2.71     0     0     0   inf
+[  3.823429] CPU 12| <5>      8  1.00  0.98  1.15  1.52     0  5.36     0     0     0     0   inf
+[  3.823434] CPU 12| <5>      9  1.03  1.12  1.03  1.53  3.26  2.04     0     0     0     0   inf
+[  3.823439] CPU 12| <5>    M/m  1.07  1.15  2.72   inf   inf   inf   inf   inf   inf   inf
+[  3.823440] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  3.823457] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  3.823458] CPU 12| <5> Outbound messages:  0.96  1.04  0.44  0.73  1.54  0.00  0.00  0.00  0.00  5.31     inf
+[  3.823459] CPU 12| <5>  Inbound messages:  0.96  0.99  0.99  0.99  1.00  1.01  1.01  1.01  1.00  1.03    1.07
+[  3.882642] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  3.883013] CPU 12| <5> node-0 completed shuffle op 0 in 231.3 us (15.64/15.64 Gbps), benchmark overhead 39.8 us
+[  3.883277] CPU 12| <5> node-0 completed shuffle op 1 in 238.0 us (15.20/15.20 Gbps), benchmark overhead 7.2 us
+[  3.883540] CPU 12| <5> node-0 completed shuffle op 2 in 237.6 us (15.23/15.23 Gbps), benchmark overhead 8.8 us
+[  3.883805] CPU 12| <5> node-0 completed shuffle op 3 in 228.8 us (15.81/15.81 Gbps), benchmark overhead 19.3 us
+[  3.884071] CPU 12| <5> node-0 completed shuffle op 4 in 232.2 us (15.58/15.58 Gbps), benchmark overhead 15.8 us
+[  3.884333] CPU 12| <5> node-0 completed shuffle op 5 in 230.6 us (15.69/15.69 Gbps), benchmark overhead 14.6 us
+[  3.884598] CPU 12| <5> node-0 completed shuffle op 6 in 231.6 us (15.62/15.62 Gbps), benchmark overhead 16.2 us
+[  3.884858] CPU 12| <5> node-0 completed shuffle op 7 in 234.2 us (15.44/15.44 Gbps), benchmark overhead 7.9 us
+[  3.885135] CPU 12| <5> node-0 completed shuffle op 8 in 230.6 us (15.68/15.68 Gbps), benchmark overhead 29.3 us
+[  3.885558] CPU 12| <5> node-0 completed shuffle op 9 in 366.0 us (9.88/9.88 Gbps), benchmark overhead 39.9 us
+[  3.885824] CPU 12| <5> node-0 completed shuffle op 10 in 229.8 us (15.74/15.74 Gbps), benchmark overhead 18.7 us
+[  3.886085] CPU 12| <5> node-0 completed shuffle op 11 in 228.6 us (15.82/15.82 Gbps), benchmark overhead 15.3 us
+[  3.886349] CPU 12| <5> node-0 completed shuffle op 12 in 233.3 us (15.50/15.50 Gbps), benchmark overhead 13.3 us
+[  3.886639] CPU 12| <5> node-0 completed shuffle op 13 in 233.1 us (15.52/15.52 Gbps), benchmark overhead 13.6 us
+[  3.886902] CPU 12| <5> node-0 completed shuffle op 14 in 233.4 us (15.50/15.50 Gbps), benchmark overhead 12.4 us
+[  3.887169] CPU 12| <5> node-0 completed shuffle op 15 in 235.7 us (15.35/15.35 Gbps), benchmark overhead 14.3 us
+[  3.887432] CPU 12| <5> node-0 completed shuffle op 16 in 235.8 us (15.34/15.34 Gbps), benchmark overhead 9.8 us
+[  3.887696] CPU 12| <5> node-0 completed shuffle op 17 in 232.0 us (15.59/15.59 Gbps), benchmark overhead 14.3 us
+[  3.887956] CPU 12| <5> node-0 completed shuffle op 18 in 230.4 us (15.70/15.70 Gbps), benchmark overhead 13.0 us
+[  3.888221] CPU 12| <5> node-0 completed shuffle op 19 in 232.4 us (15.57/15.57 Gbps), benchmark overhead 14.5 us
+[  3.888226] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.80, part. skewness 1.00, throughput 15.6 Gbps
+[  3.983018] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 1.90 --log
+[  4.115648] CPU 12| <5> shuffle matrix:
+[  4.115685] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  4.115692] CPU 12| <5>      0  0.92  0.71  1.12     0  1.54     0     0     0     0  5.71   inf
+[  4.115698] CPU 12| <5>      1  0.91  1.11  0.69  0.35  1.20     0     0     0  1.45  4.29   inf
+[  4.115704] CPU 12| <5>      2  0.94  1.08  0.71  1.52     0     0     0     0  5.75     0   inf
+[  4.115709] CPU 12| <5>      3  1.02  1.01  0.69  1.53     0     0     0  2.94  2.81     0   inf
+[  4.115714] CPU 12| <5>      4  1.03  1.02  0.71  1.53     0     0     0  5.71     0     0   inf
+[  4.115720] CPU 12| <5>      5  1.04  1.02  0.71  1.52     0     0  4.38  1.34     0     0   inf
+[  4.115725] CPU 12| <5>      6  1.03  1.03  0.71  1.51     0  0.09  5.62     0     0     0   inf
+[  4.115731] CPU 12| <5>      7  1.03  1.02  0.71  1.52     0  5.72     0     0     0     0   inf
+[  4.115736] CPU 12| <5>      8  1.03  1.01  1.70  0.50  1.57  4.18     0     0     0     0   inf
+[  4.115741] CPU 12| <5>      9  1.05  1.00  2.26     0  5.69     0     0     0     0     0   inf
+[  4.115745] CPU 12| <5>    M/m  1.15  1.56  3.28   inf   inf   inf   inf   inf   inf   inf
+[  4.115746] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  4.115764] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  4.115765] CPU 12| <5> Outbound messages:  0.92  0.71  1.12  0.00  1.54  0.00  0.00  0.00  0.00  5.71     inf
+[  4.115765] CPU 12| <5>  Inbound messages:  0.92  0.91  0.94  1.02  1.03  1.04  1.03  1.03  1.03  1.05    1.15
+[  4.183570] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  4.183986] CPU 01| <5> node-0 completed shuffle op 0 in 285.1 us (12.74/12.74 Gbps), benchmark overhead 7.0 us
+[  4.184269] CPU 12| <5> node-0 completed shuffle op 1 in 253.4 us (14.33/14.33 Gbps), benchmark overhead 9.7 us
+[  4.184552] CPU 12| <5> node-0 completed shuffle op 2 in 251.9 us (14.42/14.42 Gbps), benchmark overhead 11.9 us
+[  4.184832] CPU 12| <5> node-0 completed shuffle op 3 in 257.6 us (14.10/14.10 Gbps), benchmark overhead 5.2 us
+[  4.185112] CPU 12| <5> node-0 completed shuffle op 4 in 251.3 us (14.45/14.45 Gbps), benchmark overhead 12.2 us
+[  4.185392] CPU 12| <5> node-0 completed shuffle op 5 in 255.1 us (14.24/14.24 Gbps), benchmark overhead 7.3 us
+[  4.185670] CPU 12| <5> node-0 completed shuffle op 6 in 255.6 us (14.21/14.21 Gbps), benchmark overhead 4.9 us
+[  4.186016] CPU 12| <5> node-0 completed shuffle op 7 in 315.5 us (11.51/11.51 Gbps), benchmark overhead 14.0 us
+[  4.186301] CPU 12| <5> node-0 completed shuffle op 8 in 253.6 us (14.32/14.32 Gbps), benchmark overhead 10.7 us
+[  4.186581] CPU 02| <5> node-0 completed shuffle op 9 in 256.4 us (14.16/14.16 Gbps), benchmark overhead 4.8 us
+[  4.186861] CPU 12| <5> node-0 completed shuffle op 10 in 252.6 us (14.37/14.37 Gbps), benchmark overhead 7.9 us
+[  4.187143] CPU 12| <5> node-0 completed shuffle op 11 in 250.8 us (14.48/14.48 Gbps), benchmark overhead 14.3 us
+[  4.187425] CPU 12| <5> node-0 completed shuffle op 12 in 253.0 us (14.35/14.35 Gbps), benchmark overhead 10.9 us
+[  4.187700] CPU 12| <5> node-0 completed shuffle op 13 in 249.2 us (14.57/14.57 Gbps), benchmark overhead 8.5 us
+[  4.187976] CPU 12| <5> node-0 completed shuffle op 14 in 250.0 us (14.52/14.52 Gbps), benchmark overhead 8.3 us
+[  4.188254] CPU 12| <5> node-0 completed shuffle op 15 in 253.7 us (14.31/14.31 Gbps), benchmark overhead 7.5 us
+[  4.188560] CPU 12| <5> node-0 completed shuffle op 16 in 256.1 us (14.18/14.18 Gbps), benchmark overhead 6.2 us
+[  4.188836] CPU 12| <5> node-0 completed shuffle op 17 in 251.0 us (14.47/14.47 Gbps), benchmark overhead 7.6 us
+[  4.189115] CPU 12| <5> node-0 completed shuffle op 18 in 248.1 us (14.63/14.63 Gbps), benchmark overhead 14.2 us
+[  4.189395] CPU 12| <5> node-0 completed shuffle op 19 in 245.4 us (14.80/14.80 Gbps), benchmark overhead 17.5 us
+[  4.189401] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-1.90, part. skewness 1.00, throughput 14.4 Gbps
+[  4.283937] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.00 --log
+[  4.412271] CPU 12| <5> shuffle matrix:
+[  4.412278] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  4.412286] CPU 12| <5>      0  0.93  0.80  0.68  1.52     0     0     0     0     0  6.07   inf
+[  4.412292] CPU 12| <5>      1  0.92  0.79  0.67  1.52     0     0     0     0  2.18  3.93   inf
+[  4.412297] CPU 12| <5>      2  0.92  0.78  0.68  1.51     0     0     0     0  6.11     0   inf
+[  4.412303] CPU 12| <5>      3  0.92  0.80  0.66  1.50     0     0     0  4.41  1.71     0   inf
+[  4.412309] CPU 12| <5>      4  0.92  0.81  0.67  1.52     0     0  0.49  5.59     0     0   inf
+[  4.412314] CPU 12| <5>      5  0.98  0.82  0.61  1.50     0     0  6.09     0     0     0   inf
+[  4.412319] CPU 12| <5>      6  1.10  1.31  1.51     0     0  2.65  3.42     0     0     0   inf
+[  4.412324] CPU 12| <5>      7  1.11  1.31  1.49     0     0  6.10     0     0     0     0   inf
+[  4.412329] CPU 12| <5>      8  1.09  1.29  1.49     0  4.87  1.25     0     0     0     0   inf
+[  4.412334] CPU 12| <5>      9  1.11  1.30  1.54  0.92  5.13     0     0     0     0     0   inf
+[  4.412339] CPU 12| <5>    M/m  1.21  1.68  2.54   inf   inf   inf   inf   inf   inf   inf
+[  4.412340] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  4.412358] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  4.412359] CPU 12| <5> Outbound messages:  0.93  0.80  0.68  1.52  0.00  0.00  0.00  0.00  0.00  6.07     inf
+[  4.412359] CPU 12| <5>  Inbound messages:  0.93  0.92  0.92  0.92  0.92  0.98  1.10  1.11  1.09  1.11    1.21
+[  4.484500] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  4.484868] CPU 12| <5> node-0 completed shuffle op 0 in 278.2 us (13.04/13.04 Gbps), benchmark overhead 5.9 us
+[  4.485162] CPU 12| <5> node-0 completed shuffle op 1 in 270.8 us (13.40/13.40 Gbps), benchmark overhead 4.5 us
+[  4.485453] CPU 12| <5> node-0 completed shuffle op 2 in 268.6 us (13.51/13.51 Gbps), benchmark overhead 5.9 us
+[  4.485745] CPU 12| <5> node-0 completed shuffle op 3 in 269.2 us (13.48/13.48 Gbps), benchmark overhead 5.9 us
+[  4.486040] CPU 12| <5> node-0 completed shuffle op 4 in 265.8 us (13.65/13.65 Gbps), benchmark overhead 11.9 us
+[  4.486332] CPU 12| <5> node-0 completed shuffle op 5 in 266.8 us (13.60/13.60 Gbps), benchmark overhead 7.7 us
+[  4.486627] CPU 12| <5> node-0 completed shuffle op 6 in 275.6 us (13.16/13.16 Gbps), benchmark overhead 3.7 us
+[  4.486916] CPU 12| <5> node-0 completed shuffle op 7 in 266.9 us (13.59/13.59 Gbps), benchmark overhead 5.4 us
+[  4.487215] CPU 12| <5> node-0 completed shuffle op 8 in 266.6 us (13.61/13.61 Gbps), benchmark overhead 14.6 us
+[  4.487511] CPU 12| <5> node-0 completed shuffle op 9 in 270.1 us (13.43/13.43 Gbps), benchmark overhead 7.6 us
+[  4.487805] CPU 12| <5> node-0 completed shuffle op 10 in 271.8 us (13.35/13.35 Gbps), benchmark overhead 5.5 us
+[  4.488100] CPU 02| <5> node-0 completed shuffle op 11 in 272.7 us (13.31/13.31 Gbps), benchmark overhead 4.8 us
+[  4.488396] CPU 12| <5> node-0 completed shuffle op 12 in 269.3 us (13.47/13.47 Gbps), benchmark overhead 7.4 us
+[  4.488688] CPU 12| <5> node-0 completed shuffle op 13 in 271.1 us (13.38/13.38 Gbps), benchmark overhead 4.9 us
+[  4.488981] CPU 12| <5> node-0 completed shuffle op 14 in 272.0 us (13.34/13.34 Gbps), benchmark overhead 3.8 us
+[  4.489275] CPU 12| <5> node-0 completed shuffle op 15 in 272.8 us (13.30/13.30 Gbps), benchmark overhead 3.9 us
+[  4.489566] CPU 12| <5> node-0 completed shuffle op 16 in 265.8 us (13.65/13.65 Gbps), benchmark overhead 9.2 us
+[  4.489856] CPU 12| <5> node-0 completed shuffle op 17 in 263.3 us (13.78/13.78 Gbps), benchmark overhead 9.4 us
+[  4.490149] CPU 01| <5> node-0 completed shuffle op 18 in 270.0 us (13.44/13.44 Gbps), benchmark overhead 5.2 us
+[  4.490492] CPU 12| <5> node-0 completed shuffle op 19 in 264.8 us (13.70/13.70 Gbps), benchmark overhead 11.7 us
+[  4.490498] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.00, part. skewness 1.00, throughput 13.5 Gbps
+[  4.584867] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.10 --log
+[  4.722136] CPU 12| <5> shuffle matrix:
+[  4.722143] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  4.722151] CPU 12| <5>      0  0.89  0.58  0.64  1.48     0     0     0     0     0  6.41   inf
+[  4.722157] CPU 12| <5>      1  0.88  0.91  0.29  1.50     0     0     0     0  2.84  3.59   inf
+[  4.722162] CPU 12| <5>      2  0.88  1.19     0  1.49     0     0     0     0  6.43     0   inf
+[  4.722168] CPU 12| <5>      3  0.88  1.21  0.16  1.31     0     0     0  5.72  0.72     0   inf
+[  4.722173] CPU 12| <5>      4  0.92  1.17  1.49     0     0     0  2.14  4.28     0     0   inf
+[  4.722178] CPU 12| <5>      5  1.12  0.99  1.48     0     0     0  6.42     0     0     0   inf
+[  4.722183] CPU 12| <5>      6  1.11  1.01  1.49     0     0  4.96  1.44     0     0     0   inf
+[  4.722189] CPU 12| <5>      7  1.11  0.98  1.48     0  1.38  5.04     0     0     0     0   inf
+[  4.722194] CPU 12| <5>      8  1.10  0.99  1.45     0  6.45     0     0     0     0     0   inf
+[  4.722199] CPU 12| <5>      9  1.12  0.97  1.52  4.22  2.17     0     0     0     0     0   inf
+[  4.722203] CPU 12| <5>    M/m  1.28  2.10   inf   inf   inf   inf   inf   inf   inf   inf
+[  4.722204] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  4.722222] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  4.722223] CPU 12| <5> Outbound messages:  0.89  0.58  0.64  1.48  0.00  0.00  0.00  0.00  0.00  6.41     inf
+[  4.722224] CPU 12| <5>  Inbound messages:  0.89  0.88  0.88  0.88  0.92  1.12  1.11  1.11  1.10  1.12    1.28
+[  4.785441] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  4.785830] CPU 12| <5> node-0 completed shuffle op 0 in 273.5 us (13.33/13.33 Gbps), benchmark overhead 26.3 us
+[  4.786143] CPU 12| <5> node-0 completed shuffle op 1 in 259.6 us (14.04/14.04 Gbps), benchmark overhead 34.7 us
+[  4.786455] CPU 12| <5> node-0 completed shuffle op 2 in 254.7 us (14.31/14.31 Gbps), benchmark overhead 39.3 us
+[  4.786767] CPU 12| <5> node-0 completed shuffle op 3 in 257.2 us (14.17/14.17 Gbps), benchmark overhead 37.8 us
+[  4.787087] CPU 12| <5> node-0 completed shuffle op 4 in 255.7 us (14.25/14.25 Gbps), benchmark overhead 45.2 us
+[  4.787396] CPU 12| <5> node-0 completed shuffle op 5 in 253.7 us (14.36/14.36 Gbps), benchmark overhead 38.3 us
+[  4.787704] CPU 12| <5> node-0 completed shuffle op 6 in 250.5 us (14.55/14.55 Gbps), benchmark overhead 39.4 us
+[  4.788014] CPU 12| <5> node-0 completed shuffle op 7 in 257.0 us (14.18/14.18 Gbps), benchmark overhead 35.4 us
+[  4.788328] CPU 12| <5> node-0 completed shuffle op 8 in 253.4 us (14.38/14.38 Gbps), benchmark overhead 42.3 us
+[  4.788637] CPU 12| <5> node-0 completed shuffle op 9 in 250.3 us (14.56/14.56 Gbps), benchmark overhead 41.5 us
+[  4.788944] CPU 12| <5> node-0 completed shuffle op 10 in 253.1 us (14.40/14.40 Gbps), benchmark overhead 35.5 us
+[  4.789255] CPU 12| <5> node-0 completed shuffle op 11 in 255.9 us (14.24/14.24 Gbps), benchmark overhead 38.1 us
+[  4.789564] CPU 12| <5> node-0 completed shuffle op 12 in 256.7 us (14.20/14.20 Gbps), benchmark overhead 33.7 us
+[  4.789879] CPU 12| <5> node-0 completed shuffle op 13 in 253.2 us (14.40/14.40 Gbps), benchmark overhead 43.7 us
+[  4.790191] CPU 12| <5> node-0 completed shuffle op 14 in 258.9 us (14.07/14.07 Gbps), benchmark overhead 34.9 us
+[  4.790504] CPU 12| <5> node-0 completed shuffle op 15 in 254.2 us (14.34/14.34 Gbps), benchmark overhead 41.7 us
+[  4.790815] CPU 12| <5> node-0 completed shuffle op 16 in 255.8 us (14.24/14.24 Gbps), benchmark overhead 37.0 us
+[  4.791154] CPU 12| <5> node-0 completed shuffle op 17 in 255.2 us (14.28/14.28 Gbps), benchmark overhead 43.3 us
+[  4.791467] CPU 12| <5> node-0 completed shuffle op 18 in 247.9 us (14.70/14.70 Gbps), benchmark overhead 47.0 us
+[  4.791783] CPU 12| <5> node-0 completed shuffle op 19 in 254.7 us (14.31/14.31 Gbps), benchmark overhead 43.1 us
+[  4.791788] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.10, part. skewness 1.00, throughput 14.3 Gbps
+[  4.885814] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.20 --log
+[  5.017257] CPU 12| <5> shuffle matrix:
+[  5.017264] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  5.017271] CPU 12| <5>      0  0.91  0.93     0  1.45     0     0     0     0     0  6.71   inf
+[  5.017278] CPU 12| <5>      1  0.90  0.91  0.10  1.36     0     0     0     0  3.44  3.29   inf
+[  5.017283] CPU 12| <5>      2  0.90  0.91  1.47     0     0     0     0  0.16  6.56     0   inf
+[  5.017288] CPU 12| <5>      3  0.90  0.92  1.44     0     0     0     0  6.74     0     0   inf
+[  5.017294] CPU 12| <5>      4  0.91  0.92  1.45     0     0     0  3.62  3.10     0     0   inf
+[  5.017299] CPU 12| <5>      5  0.92  0.92  1.44     0     0  0.34  6.38     0     0     0   inf
+[  5.017304] CPU 12| <5>      6  0.91  0.94  1.46     0     0  6.70     0     0     0     0   inf
+[  5.017309] CPU 12| <5>      7  1.18  0.65  1.46     0  3.75  2.96     0     0     0     0   inf
+[  5.017314] CPU 12| <5>      8  1.23  0.83  1.20  0.50  6.25     0     0     0     0     0   inf
+[  5.017319] CPU 12| <5>      9  1.23  2.08     0  6.69     0     0     0     0     0     0   inf
+[  5.017324] CPU 12| <5>    M/m  1.37  3.19   inf   inf   inf   inf   inf   inf   inf   inf
+[  5.017325] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  5.017342] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  5.017343] CPU 12| <5> Outbound messages:  0.91  0.93  0.00  1.45  0.00  0.00  0.00  0.00  0.00  6.71     inf
+[  5.017344] CPU 12| <5>  Inbound messages:  0.91  0.90  0.90  0.90  0.91  0.92  0.91  1.18  1.23  1.23    1.37
+[  5.086372] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  5.086766] CPU 12| <5> node-0 completed shuffle op 0 in 299.8 us (12.13/12.13 Gbps), benchmark overhead 4.6 us
+[  5.087058] CPU 12| <5> node-0 completed shuffle op 1 in 257.5 us (14.12/14.12 Gbps), benchmark overhead 16.6 us
+[  5.087355] CPU 12| <5> node-0 completed shuffle op 2 in 257.2 us (14.14/14.14 Gbps), benchmark overhead 22.2 us
+[  5.087653] CPU 12| <5> node-0 completed shuffle op 3 in 258.6 us (14.05/14.05 Gbps), benchmark overhead 21.5 us
+[  5.087950] CPU 12| <5> node-0 completed shuffle op 4 in 258.0 us (14.09/14.09 Gbps), benchmark overhead 21.2 us
+[  5.088243] CPU 12| <5> node-0 completed shuffle op 5 in 259.3 us (14.02/14.02 Gbps), benchmark overhead 16.6 us
+[  5.088538] CPU 12| <5> node-0 completed shuffle op 6 in 257.0 us (14.14/14.14 Gbps), benchmark overhead 20.7 us
+[  5.088835] CPU 12| <5> node-0 completed shuffle op 7 in 259.5 us (14.01/14.01 Gbps), benchmark overhead 20.2 us
+[  5.089132] CPU 12| <5> node-0 completed shuffle op 8 in 258.4 us (14.07/14.07 Gbps), benchmark overhead 20.1 us
+[  5.089421] CPU 12| <5> node-0 completed shuffle op 9 in 256.9 us (14.15/14.15 Gbps), benchmark overhead 14.0 us
+[  5.089715] CPU 12| <5> node-0 completed shuffle op 10 in 255.8 us (14.21/14.21 Gbps), benchmark overhead 21.3 us
+[  5.090009] CPU 12| <5> node-0 completed shuffle op 11 in 260.2 us (13.97/13.97 Gbps), benchmark overhead 15.3 us
+[  5.090304] CPU 12| <5> node-0 completed shuffle op 12 in 254.8 us (14.27/14.27 Gbps), benchmark overhead 22.7 us
+[  5.090602] CPU 12| <5> node-0 completed shuffle op 13 in 261.2 us (13.92/13.92 Gbps), benchmark overhead 19.3 us
+[  5.090899] CPU 12| <5> node-0 completed shuffle op 14 in 256.2 us (14.19/14.19 Gbps), benchmark overhead 23.1 us
+[  5.091196] CPU 12| <5> node-0 completed shuffle op 15 in 254.5 us (14.29/14.29 Gbps), benchmark overhead 25.2 us
+[  5.091524] CPU 12| <5> node-0 completed shuffle op 16 in 256.4 us (14.18/14.18 Gbps), benchmark overhead 24.8 us
+[  5.091819] CPU 12| <5> node-0 completed shuffle op 17 in 257.5 us (14.12/14.12 Gbps), benchmark overhead 20.0 us
+[  5.092114] CPU 12| <5> node-0 completed shuffle op 18 in 255.2 us (14.24/14.24 Gbps), benchmark overhead 21.2 us
+[  5.092408] CPU 12| <5> node-0 completed shuffle op 19 in 250.2 us (14.53/14.53 Gbps), benchmark overhead 26.5 us
+[  5.092414] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.20, part. skewness 1.00, throughput 14.1 Gbps
+[  5.186741] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.30 --log
+[  5.317114] CPU 12| <5> shuffle matrix:
+[  5.317121] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  5.317129] CPU 12| <5>      0  0.75  0.85  1.32  0.09     0     0     0     0     0  6.99   inf
+[  5.317134] CPU 12| <5>      1  0.94  0.63  1.42     0     0     0     0     0  3.99  3.01   inf
+[  5.317140] CPU 12| <5>      2  1.03  0.56  1.42     0     0     0     0  0.99  6.01     0   inf
+[  5.317145] CPU 12| <5>      3  1.02  0.56  1.40     0     0     0     0  7.02     0     0   inf
+[  5.317150] CPU 12| <5>      4  1.04  0.57  1.41     0     0     0  4.98  1.99     0     0   inf
+[  5.317155] CPU 12| <5>      5  1.05  0.56  1.40     0     0  1.97  5.02     0     0     0   inf
+[  5.317160] CPU 12| <5>      6  1.04  0.56  1.42     0     0  6.98     0     0     0     0   inf
+[  5.317165] CPU 12| <5>      7  1.05  1.77  0.20     0  5.93  1.05     0     0     0     0   inf
+[  5.317170] CPU 12| <5>      8  1.03  1.96     0  2.94  4.07     0     0     0     0     0   inf
+[  5.317175] CPU 12| <5>      9  1.06  1.97     0  6.98     0     0     0     0     0     0   inf
+[  5.317179] CPU 12| <5>    M/m  1.41  3.53   inf   inf   inf   inf   inf   inf   inf   inf
+[  5.317180] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  5.317198] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  5.317199] CPU 12| <5> Outbound messages:  0.75  0.85  1.32  0.09  0.00  0.00  0.00  0.00  0.00  6.99     inf
+[  5.317200] CPU 12| <5>  Inbound messages:  0.75  0.94  1.03  1.02  1.04  1.05  1.04  1.05  1.03  1.06    1.41
+[  5.387293] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  5.387672] CPU 12| <5> node-0 completed shuffle op 0 in 290.6 us (12.73/12.73 Gbps), benchmark overhead 4.9 us
+[  5.387968] CPU 12| <5> node-0 completed shuffle op 1 in 269.2 us (13.75/13.75 Gbps), benchmark overhead 8.9 us
+[  5.388266] CPU 12| <5> node-0 completed shuffle op 2 in 276.6 us (13.38/13.38 Gbps), benchmark overhead 4.2 us
+[  5.388564] CPU 11| <5> node-0 completed shuffle op 3 in 276.8 us (13.37/13.37 Gbps), benchmark overhead 4.9 us
+[  5.388869] CPU 12| <5> node-0 completed shuffle op 4 in 280.4 us (13.20/13.20 Gbps), benchmark overhead 4.7 us
+[  5.389165] CPU 12| <5> node-0 completed shuffle op 5 in 273.9 us (13.51/13.51 Gbps), benchmark overhead 4.0 us
+[  5.389464] CPU 12| <5> node-0 completed shuffle op 6 in 276.4 us (13.39/13.39 Gbps), benchmark overhead 4.2 us
+[  5.389762] CPU 12| <5> node-0 completed shuffle op 7 in 277.1 us (13.36/13.36 Gbps), benchmark overhead 4.0 us
+[  5.390056] CPU 12| <5> node-0 completed shuffle op 8 in 273.2 us (13.54/13.54 Gbps), benchmark overhead 4.5 us
+[  5.390352] CPU 12| <5> node-0 completed shuffle op 9 in 274.8 us (13.47/13.47 Gbps), benchmark overhead 4.0 us
+[  5.390648] CPU 02| <5> node-0 completed shuffle op 10 in 274.3 us (13.49/13.49 Gbps), benchmark overhead 4.4 us
+[  5.390945] CPU 12| <5> node-0 completed shuffle op 11 in 272.1 us (13.60/13.60 Gbps), benchmark overhead 5.8 us
+[  5.391246] CPU 12| <5> node-0 completed shuffle op 12 in 277.3 us (13.35/13.35 Gbps), benchmark overhead 7.1 us
+[  5.391542] CPU 12| <5> node-0 completed shuffle op 13 in 272.7 us (13.57/13.57 Gbps), benchmark overhead 5.2 us
+[  5.391864] CPU 12| <5> node-0 completed shuffle op 14 in 280.1 us (13.21/13.21 Gbps), benchmark overhead 4.6 us
+[  5.392159] CPU 12| <5> node-0 completed shuffle op 15 in 274.1 us (13.50/13.50 Gbps), benchmark overhead 3.7 us
+[  5.392454] CPU 12| <5> node-0 completed shuffle op 16 in 274.3 us (13.49/13.49 Gbps), benchmark overhead 4.0 us
+[  5.392754] CPU 12| <5> node-0 completed shuffle op 17 in 278.7 us (13.28/13.28 Gbps), benchmark overhead 4.0 us
+[  5.393051] CPU 12| <5> node-0 completed shuffle op 18 in 269.1 us (13.75/13.75 Gbps), benchmark overhead 11.2 us
+[  5.393349] CPU 12| <5> node-0 completed shuffle op 19 in 275.3 us (13.44/13.44 Gbps), benchmark overhead 5.2 us
+[  5.393355] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.30, part. skewness 1.00, throughput 13.5 Gbps
+[  5.487662] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.40 --log
+[  5.618715] CPU 12| <5> shuffle matrix:
+[  5.618722] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  5.618729] CPU 12| <5>      0  0.88  0.52  1.36     0     0     0     0     0     0  7.23   inf
+[  5.618735] CPU 12| <5>      1  0.88  0.50  1.37     0     0     0     0     0  4.49  2.77   inf
+[  5.618740] CPU 12| <5>      2  0.87  0.50  1.37     0     0     0     0  1.75  5.51     0   inf
+[  5.618746] CPU 12| <5>      3  0.87  0.51  1.37     0     0     0     0  7.26     0     0   inf
+[  5.618751] CPU 12| <5>      4  0.88  0.53  1.36     0     0     0  6.23  0.99     0     0   inf
+[  5.618756] CPU 12| <5>      5  0.89  1.08  0.80     0     0  3.46  3.77     0     0     0   inf
+[  5.618761] CPU 12| <5>      6  0.88  1.90     0     0  0.68  6.54     0     0     0     0   inf
+[  5.618766] CPU 12| <5>      7  1.06  1.72     0     0  7.22     0     0     0     0     0   inf
+[  5.618771] CPU 12| <5>      8  1.39  1.36     0  5.16  2.10     0     0     0     0     0   inf
+[  5.618776] CPU 12| <5>      9  1.41  1.38  2.37  4.84     0     0     0     0     0     0   inf
+[  5.618780] CPU 12| <5>    M/m  1.62  3.80   inf   inf   inf   inf   inf   inf   inf   inf
+[  5.618781] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  5.618799] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  5.618800] CPU 12| <5> Outbound messages:  0.88  0.52  1.36  0.00  0.00  0.00  0.00  0.00  0.00  7.23     inf
+[  5.618801] CPU 12| <5>  Inbound messages:  0.88  0.88  0.87  0.87  0.88  0.89  0.88  1.06  1.39  1.41    1.62
+[  5.688217] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  5.688627] CPU 12| <5> node-0 completed shuffle op 0 in 312.0 us (11.69/11.69 Gbps), benchmark overhead 4.5 us
+[  5.688937] CPU 01| <5> node-0 completed shuffle op 1 in 286.9 us (12.71/12.71 Gbps), benchmark overhead 5.6 us
+[  5.689248] CPU 12| <5> node-0 completed shuffle op 2 in 286.0 us (12.75/12.75 Gbps), benchmark overhead 4.5 us
+[  5.689553] CPU 12| <5> node-0 completed shuffle op 3 in 284.1 us (12.84/12.84 Gbps), benchmark overhead 4.4 us
+[  5.689861] CPU 12| <5> node-0 completed shuffle op 4 in 287.0 us (12.71/12.71 Gbps), benchmark overhead 4.3 us
+[  5.690173] CPU 12| <5> node-0 completed shuffle op 5 in 289.6 us (12.59/12.59 Gbps), benchmark overhead 4.0 us
+[  5.690479] CPU 12| <5> node-0 completed shuffle op 6 in 284.9 us (12.80/12.80 Gbps), benchmark overhead 4.1 us
+[  5.690787] CPU 12| <5> node-0 completed shuffle op 7 in 286.8 us (12.72/12.72 Gbps), benchmark overhead 4.6 us
+[  5.691088] CPU 12| <5> node-0 completed shuffle op 8 in 280.1 us (13.02/13.02 Gbps), benchmark overhead 4.4 us
+[  5.691392] CPU 12| <5> node-0 completed shuffle op 9 in 282.3 us (12.92/12.92 Gbps), benchmark overhead 4.2 us
+[  5.691699] CPU 12| <5> node-0 completed shuffle op 10 in 285.0 us (12.80/12.80 Gbps), benchmark overhead 4.0 us
+[  5.692011] CPU 12| <5> node-0 completed shuffle op 11 in 286.7 us (12.72/12.72 Gbps), benchmark overhead 4.1 us
+[  5.692331] CPU 12| <5> node-0 completed shuffle op 12 in 278.8 us (13.08/13.08 Gbps), benchmark overhead 4.1 us
+[  5.692643] CPU 12| <5> node-0 completed shuffle op 13 in 289.7 us (12.59/12.59 Gbps), benchmark overhead 4.6 us
+[  5.692945] CPU 12| <5> node-0 completed shuffle op 14 in 281.5 us (12.96/12.96 Gbps), benchmark overhead 3.8 us
+[  5.693254] CPU 12| <5> node-0 completed shuffle op 15 in 284.9 us (12.80/12.80 Gbps), benchmark overhead 4.7 us
+[  5.693557] CPU 12| <5> node-0 completed shuffle op 16 in 281.7 us (12.95/12.95 Gbps), benchmark overhead 4.5 us
+[  5.694000] CPU 12| <5> node-0 completed shuffle op 17 in 247.1 us (14.76/14.76 Gbps), benchmark overhead 179.1 us
+[  5.694306] CPU 01| <5> node-0 completed shuffle op 18 in 283.1 us (12.89/12.89 Gbps), benchmark overhead 5.5 us
+[  5.694612] CPU 12| <5> node-0 completed shuffle op 19 in 282.8 us (12.90/12.90 Gbps), benchmark overhead 4.0 us
+[  5.694618] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.40, part. skewness 1.00, throughput 12.8 Gbps
+[  5.788575] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.50 --log
+[  5.917486] CPU 12| <5> shuffle matrix:
+[  5.917492] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  5.917499] CPU 12| <5>      0  0.74  0.49  1.31     0     0     0     0     0     0  7.46   inf
+[  5.917505] CPU 12| <5>      1  0.74  0.46  1.32     0     0     0     0     0  4.94  2.54   inf
+[  5.917510] CPU 12| <5>      2  0.74  0.45  1.32     0     0     0     0  2.42  5.06     0   inf
+[  5.917515] CPU 12| <5>      3  0.74  0.47  1.32     0     0     0     0  7.48     0     0   inf
+[  5.917521] CPU 12| <5>      4  0.90  1.52  0.14     0     0     0  7.35  0.10     0     0   inf
+[  5.917526] CPU 12| <5>      5  1.23  1.33     0     0     0  4.79  2.65     0     0     0   inf
+[  5.917531] CPU 12| <5>      6  1.22  1.33     0     0  2.24  5.21     0     0     0     0   inf
+[  5.917536] CPU 12| <5>      7  1.23  1.32     0     0  7.44     0     0     0     0     0   inf
+[  5.917541] CPU 12| <5>      8  1.22  1.31     0  7.15  0.32     0     0     0     0     0   inf
+[  5.917546] CPU 12| <5>      9  1.23  1.32  4.60  2.85     0     0     0     0     0     0   inf
+[  5.917550] CPU 12| <5>    M/m  1.68  3.35   inf   inf   inf   inf   inf   inf   inf   inf
+[  5.917551] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  5.917568] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  5.917569] CPU 12| <5> Outbound messages:  0.74  0.49  1.31  0.00  0.00  0.00  0.00  0.00  0.00  7.46     inf
+[  5.917570] CPU 12| <5>  Inbound messages:  0.74  0.74  0.74  0.74  0.90  1.23  1.22  1.23  1.22  1.23    1.68
+[  5.989142] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  5.989527] CPU 12| <5> node-0 completed shuffle op 0 in 288.4 us (12.84/12.84 Gbps), benchmark overhead 4.7 us
+[  5.989836] CPU 12| <5> node-0 completed shuffle op 1 in 286.6 us (12.92/12.92 Gbps), benchmark overhead 4.9 us
+[  5.990158] CPU 12| <5> node-0 completed shuffle op 2 in 286.5 us (12.93/12.93 Gbps), benchmark overhead 19.1 us
+[  5.990473] CPU 12| <5> node-0 completed shuffle op 3 in 293.5 us (12.62/12.62 Gbps), benchmark overhead 3.9 us
+[  5.990779] CPU 12| <5> node-0 completed shuffle op 4 in 285.1 us (12.99/12.99 Gbps), benchmark overhead 4.1 us
+[  5.991087] CPU 12| <5> node-0 completed shuffle op 5 in 286.8 us (12.91/12.91 Gbps), benchmark overhead 4.0 us
+[  5.991401] CPU 12| <5> node-0 completed shuffle op 6 in 291.7 us (12.69/12.69 Gbps), benchmark overhead 4.6 us
+[  5.991701] CPU 12| <5> node-0 completed shuffle op 7 in 279.4 us (13.25/13.25 Gbps), benchmark overhead 3.9 us
+[  5.992012] CPU 12| <5> node-0 completed shuffle op 8 in 288.7 us (12.83/12.83 Gbps), benchmark overhead 4.1 us
+[  5.992321] CPU 12| <5> node-0 completed shuffle op 9 in 288.6 us (12.83/12.83 Gbps), benchmark overhead 4.2 us
+[  5.992645] CPU 12| <5> node-0 completed shuffle op 10 in 282.3 us (13.12/13.12 Gbps), benchmark overhead 4.7 us
+[  5.992955] CPU 12| <5> node-0 completed shuffle op 11 in 288.4 us (12.84/12.84 Gbps), benchmark overhead 4.1 us
+[  5.993257] CPU 12| <5> node-0 completed shuffle op 12 in 281.3 us (13.17/13.17 Gbps), benchmark overhead 4.3 us
+[  5.993570] CPU 12| <5> node-0 completed shuffle op 13 in 291.3 us (12.71/12.71 Gbps), benchmark overhead 3.8 us
+[  5.993876] CPU 12| <5> node-0 completed shuffle op 14 in 285.0 us (12.99/12.99 Gbps), benchmark overhead 4.8 us
+[  5.994186] CPU 12| <5> node-0 completed shuffle op 15 in 288.5 us (12.84/12.84 Gbps), benchmark overhead 4.6 us
+[  5.994491] CPU 12| <5> node-0 completed shuffle op 16 in 283.7 us (13.05/13.05 Gbps), benchmark overhead 4.2 us
+[  5.994801] CPU 12| <5> node-0 completed shuffle op 17 in 288.6 us (12.83/12.83 Gbps), benchmark overhead 4.1 us
+[  5.995107] CPU 12| <5> node-0 completed shuffle op 18 in 285.0 us (13.00/13.00 Gbps), benchmark overhead 3.9 us
+[  5.995411] CPU 12| <5> node-0 completed shuffle op 19 in 283.9 us (13.05/13.05 Gbps), benchmark overhead 3.8 us
+[  5.995416] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.50, part. skewness 1.00, throughput 12.9 Gbps
+[  6.089514] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.60 --log
+[  6.209695] CPU 12| <5> shuffle matrix:
+[  6.209701] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  6.209708] CPU 12| <5>      0  0.63  0.44  1.27     0     0     0     0     0     0  7.65   inf
+[  6.209714] CPU 12| <5>      1  0.78  0.28  1.26     0     0     0     0     0  5.34  2.35   inf
+[  6.209719] CPU 12| <5>      2  1.06  0.41  0.85     0     0     0     0  3.02  4.66     0   inf
+[  6.209724] CPU 12| <5>      3  1.06  1.27     0     0     0     0  0.70  6.98     0     0   inf
+[  6.209729] CPU 12| <5>      4  1.08  1.27     0     0     0     0  7.66     0     0     0   inf
+[  6.209734] CPU 12| <5>      5  1.09  1.27     0     0     0  6.00  1.65     0     0     0   inf
+[  6.209739] CPU 12| <5>      6  1.07  1.28     0     0  3.65  4.00     0     0     0     0   inf
+[  6.209744] CPU 12| <5>      7  1.08  1.27     0  1.30  6.35     0     0     0     0     0   inf
+[  6.209749] CPU 12| <5>      8  1.06  1.26     0  7.68     0     0     0     0     0     0   inf
+[  6.209754] CPU 12| <5>      9  1.09  1.26  6.62  1.02     0     0     0     0     0     0   inf
+[  6.209758] CPU 12| <5>    M/m  1.73  4.54   inf   inf   inf   inf   inf   inf   inf   inf
+[  6.209759] CPU 12| <5> total TX bytes 499999, total RX bytes 499999, avg. message size 50000
+[  6.209777] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  6.209777] CPU 12| <5> Outbound messages:  0.63  0.44  1.27  0.00  0.00  0.00  0.00  0.00  0.00  7.65     inf
+[  6.209778] CPU 12| <5>  Inbound messages:  0.63  0.78  1.06  1.06  1.08  1.09  1.07  1.08  1.06  1.09    1.73
+[  6.290083] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  6.290481] CPU 12| <5> node-0 completed shuffle op 0 in 309.4 us (12.11/12.11 Gbps), benchmark overhead 4.8 us
+[  6.290797] CPU 12| <5> node-0 completed shuffle op 1 in 292.4 us (12.82/12.82 Gbps), benchmark overhead 4.5 us
+[  6.291113] CPU 01| <5> node-0 completed shuffle op 2 in 293.9 us (12.75/12.75 Gbps), benchmark overhead 5.3 us
+[  6.291438] CPU 12| <5> node-0 completed shuffle op 3 in 301.6 us (12.43/12.43 Gbps), benchmark overhead 4.3 us
+[  6.291756] CPU 12| <5> node-0 completed shuffle op 4 in 295.2 us (12.70/12.70 Gbps), benchmark overhead 4.3 us
+[  6.292072] CPU 12| <5> node-0 completed shuffle op 5 in 293.9 us (12.75/12.75 Gbps), benchmark overhead 4.4 us
+[  6.292520] CPU 12| <5> node-0 completed shuffle op 6 in 290.7 us (12.89/12.89 Gbps), benchmark overhead 141.0 us
+[  6.292837] CPU 12| <5> node-0 completed shuffle op 7 in 295.2 us (12.69/12.69 Gbps), benchmark overhead 4.0 us
+[  6.293173] CPU 12| <5> node-0 completed shuffle op 8 in 295.8 us (12.67/12.67 Gbps), benchmark overhead 4.5 us
+[  6.293499] CPU 12| <5> node-0 completed shuffle op 9 in 305.0 us (12.29/12.29 Gbps), benchmark overhead 4.1 us
+[  6.293818] CPU 12| <5> node-0 completed shuffle op 10 in 297.0 us (12.62/12.62 Gbps), benchmark overhead 4.0 us
+[  6.294135] CPU 12| <5> node-0 completed shuffle op 11 in 296.0 us (12.66/12.66 Gbps), benchmark overhead 4.5 us
+[  6.294445] CPU 12| <5> node-0 completed shuffle op 12 in 289.0 us (12.97/12.97 Gbps), benchmark overhead 3.8 us
+[  6.294762] CPU 12| <5> node-0 completed shuffle op 13 in 295.3 us (12.69/12.69 Gbps), benchmark overhead 4.8 us
+[  6.295076] CPU 12| <5> node-0 completed shuffle op 14 in 293.0 us (12.79/12.79 Gbps), benchmark overhead 4.2 us
+[  6.295394] CPU 12| <5> node-0 completed shuffle op 15 in 296.9 us (12.62/12.62 Gbps), benchmark overhead 3.8 us
+[  6.295875] CPU 12| <5> node-0 completed shuffle op 16 in 459.8 us (8.15/8.15 Gbps), benchmark overhead 4.2 us
+[  6.296198] CPU 12| <5> node-0 completed shuffle op 17 in 301.4 us (12.43/12.43 Gbps), benchmark overhead 4.6 us
+[  6.296515] CPU 12| <5> node-0 completed shuffle op 18 in 297.1 us (12.61/12.61 Gbps), benchmark overhead 3.5 us
+[  6.296826] CPU 12| <5> node-0 completed shuffle op 19 in 290.0 us (12.92/12.92 Gbps), benchmark overhead 3.8 us
+[  6.296832] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 49999, data dist. zipf-2.60, part. skewness 1.00, throughput 12.7 Gbps
+[  6.390457] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.70 --log
+[  6.514272] CPU 12| <5> shuffle matrix:
+[  6.514279] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  6.514286] CPU 12| <5>      0  0.94     0  1.22     0     0     0     0     0     0  7.84   inf
+[  6.514292] CPU 12| <5>      1  0.93  0.91  0.29     0     0     0     0     0  5.71  2.16   inf
+[  6.514297] CPU 12| <5>      2  0.93  1.20     0     0     0     0     0  3.58  4.29     0   inf
+[  6.514302] CPU 12| <5>      3  0.93  1.21     0     0     0     0  1.44  6.42     0     0   inf
+[  6.514307] CPU 12| <5>      4  0.94  1.22     0     0     0     0  7.84     0     0     0   inf
+[  6.514312] CPU 12| <5>      5  0.95  1.22     0     0     0  7.11  0.72     0     0     0   inf
+[  6.514317] CPU 12| <5>      6  0.94  1.23     0     0  4.95  2.89     0     0     0     0   inf
+[  6.514322] CPU 12| <5>      7  0.95  1.22     0  2.78  5.05     0     0     0     0     0   inf
+[  6.514327] CPU 12| <5>      8  0.94  1.20  0.65  7.22     0     0     0     0     0     0   inf
+[  6.514332] CPU 12| <5>      9  1.55  0.60  7.85     0     0     0     0     0     0     0   inf
+[  6.514336] CPU 12| <5>    M/m  1.67   inf   inf   inf   inf   inf   inf   inf   inf   inf
+[  6.514337] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  6.514354] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  6.514355] CPU 12| <5> Outbound messages:  0.94  0.00  1.22  0.00  0.00  0.00  0.00  0.00  0.00  7.84     inf
+[  6.514356] CPU 12| <5>  Inbound messages:  0.94  0.93  0.93  0.93  0.94  0.95  0.94  0.95  0.94  1.55    1.67
+[  6.591005] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  6.591406] CPU 12| <5> node-0 completed shuffle op 0 in 294.1 us (12.32/12.32 Gbps), benchmark overhead 5.1 us
+[  6.591719] CPU 12| <5> node-0 completed shuffle op 1 in 285.5 us (12.69/12.69 Gbps), benchmark overhead 4.5 us
+[  6.592019] CPU 12| <5> node-0 completed shuffle op 2 in 278.8 us (13.00/13.00 Gbps), benchmark overhead 4.2 us
+[  6.592319] CPU 12| <5> node-0 completed shuffle op 3 in 278.9 us (12.99/12.99 Gbps), benchmark overhead 4.2 us
+[  6.592626] CPU 12| <5> node-0 completed shuffle op 4 in 279.9 us (12.95/12.95 Gbps), benchmark overhead 10.3 us
+[  6.592931] CPU 12| <5> node-0 completed shuffle op 5 in 283.9 us (12.77/12.77 Gbps), benchmark overhead 4.1 us
+[  6.593257] CPU 12| <5> node-0 completed shuffle op 6 in 284.0 us (12.76/12.76 Gbps), benchmark overhead 4.1 us
+[  6.593561] CPU 12| <5> node-0 completed shuffle op 7 in 283.2 us (12.80/12.80 Gbps), benchmark overhead 4.2 us
+[  6.593867] CPU 12| <5> node-0 completed shuffle op 8 in 284.3 us (12.75/12.75 Gbps), benchmark overhead 4.1 us
+[  6.594172] CPU 12| <5> node-0 completed shuffle op 9 in 284.2 us (12.75/12.75 Gbps), benchmark overhead 4.3 us
+[  6.594475] CPU 12| <5> node-0 completed shuffle op 10 in 281.8 us (12.86/12.86 Gbps), benchmark overhead 4.3 us
+[  6.594777] CPU 12| <5> node-0 completed shuffle op 11 in 280.6 us (12.91/12.91 Gbps), benchmark overhead 4.2 us
+[  6.595080] CPU 12| <5> node-0 completed shuffle op 12 in 281.7 us (12.86/12.86 Gbps), benchmark overhead 4.3 us
+[  6.595391] CPU 12| <5> node-0 completed shuffle op 13 in 289.0 us (12.54/12.54 Gbps), benchmark overhead 4.1 us
+[  6.595699] CPU 12| <5> node-0 completed shuffle op 14 in 286.3 us (12.66/12.66 Gbps), benchmark overhead 4.3 us
+[  6.596006] CPU 12| <5> node-0 completed shuffle op 15 in 286.2 us (12.66/12.66 Gbps), benchmark overhead 3.9 us
+[  6.596313] CPU 01| <5> node-0 completed shuffle op 16 in 283.7 us (12.77/12.77 Gbps), benchmark overhead 5.9 us
+[  6.596613] CPU 12| <5> node-0 completed shuffle op 17 in 277.2 us (13.07/13.07 Gbps), benchmark overhead 4.0 us
+[  6.596917] CPU 12| <5> node-0 completed shuffle op 18 in 282.8 us (12.81/12.81 Gbps), benchmark overhead 4.1 us
+[  6.597222] CPU 12| <5> node-0 completed shuffle op 19 in 283.1 us (12.80/12.80 Gbps), benchmark overhead 4.1 us
+[  6.597227] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.70, part. skewness 1.00, throughput 12.8 Gbps
+[  6.691364] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.80 --log
+[  6.816683] CPU 12| <5> shuffle matrix:
+[  6.816689] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  6.816696] CPU 12| <5>      0  0.82  1.17     0     0     0     0     0     0     0  8.01   inf
+[  6.816702] CPU 12| <5>      1  0.82  1.14     0     0     0     0     0     0  6.05  1.99   inf
+[  6.816707] CPU 12| <5>      2  0.82  1.14     0     0     0     0     0  4.09  3.95     0   inf
+[  6.816712] CPU 12| <5>      3  0.82  1.15     0     0     0     0  2.12  5.91     0     0   inf
+[  6.816717] CPU 12| <5>      4  0.83  1.16     0     0     0  0.13  7.88     0     0     0   inf
+[  6.816722] CPU 12| <5>      5  0.84  1.16     0     0     0  8.00     0     0     0     0   inf
+[  6.816727] CPU 12| <5>      6  0.83  1.16     0     0  6.15  1.86     0     0     0     0   inf
+[  6.816732] CPU 12| <5>      7  0.83  1.16     0  4.15  3.85     0     0     0     0     0   inf
+[  6.816737] CPU 12| <5>      8  1.42  0.55  2.19  5.85     0     0     0     0     0     0   inf
+[  6.816741] CPU 12| <5>      9  1.98  0.21  7.81     0     0     0     0     0     0     0   inf
+[  6.816746] CPU 12| <5>    M/m  2.42  5.54   inf   inf   inf   inf   inf   inf   inf   inf
+[  6.816747] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  6.816764] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  6.816765] CPU 12| <5> Outbound messages:  0.82  1.17  0.00  0.00  0.00  0.00  0.00  0.00  0.00  8.01     inf
+[  6.816766] CPU 12| <5>  Inbound messages:  0.82  0.82  0.82  0.82  0.83  0.84  0.83  0.83  1.42  1.98    2.42
+[  6.891909] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  6.892293] CPU 12| <5> node-0 completed shuffle op 0 in 298.3 us (12.31/12.31 Gbps), benchmark overhead 4.8 us
+[  6.892595] CPU 01| <5> node-0 completed shuffle op 1 in 279.2 us (13.15/13.15 Gbps), benchmark overhead 5.2 us
+[  6.892897] CPU 01| <5> node-0 completed shuffle op 2 in 276.4 us (13.28/13.28 Gbps), benchmark overhead 5.2 us
+[  6.893202] CPU 12| <5> node-0 completed shuffle op 3 in 283.4 us (12.96/12.96 Gbps), benchmark overhead 4.4 us
+[  6.893541] CPU 12| <5> node-0 completed shuffle op 4 in 289.5 us (12.68/12.68 Gbps), benchmark overhead 4.9 us
+[  6.893869] CPU 12| <5> node-0 completed shuffle op 5 in 286.4 us (12.82/12.82 Gbps), benchmark overhead 4.5 us
+[  6.894172] CPU 12| <5> node-0 completed shuffle op 6 in 281.6 us (13.04/13.04 Gbps), benchmark overhead 4.5 us
+[  6.894483] CPU 12| <5> node-0 completed shuffle op 7 in 290.0 us (12.66/12.66 Gbps), benchmark overhead 4.1 us
+[  6.894786] CPU 12| <5> node-0 completed shuffle op 8 in 282.2 us (13.01/13.01 Gbps), benchmark overhead 4.4 us
+[  6.895097] CPU 01| <5> node-0 completed shuffle op 9 in 278.5 us (13.18/13.18 Gbps), benchmark overhead 15.1 us
+[  6.895405] CPU 12| <5> node-0 completed shuffle op 10 in 286.1 us (12.83/12.83 Gbps), benchmark overhead 4.4 us
+[  6.895714] CPU 12| <5> node-0 completed shuffle op 11 in 286.3 us (12.83/12.83 Gbps), benchmark overhead 4.8 us
+[  6.896025] CPU 01| <5> node-0 completed shuffle op 12 in 288.9 us (12.71/12.71 Gbps), benchmark overhead 5.0 us
+[  6.896325] CPU 01| <5> node-0 completed shuffle op 13 in 277.4 us (13.24/13.24 Gbps), benchmark overhead 5.0 us
+[  6.896636] CPU 01| <5> node-0 completed shuffle op 14 in 287.8 us (12.76/12.76 Gbps), benchmark overhead 5.1 us
+[  6.896935] CPU 12| <5> node-0 completed shuffle op 15 in 278.2 us (13.20/13.20 Gbps), benchmark overhead 4.0 us
+[  6.897238] CPU 12| <5> node-0 completed shuffle op 16 in 281.4 us (13.05/13.05 Gbps), benchmark overhead 4.6 us
+[  6.897539] CPU 12| <5> node-0 completed shuffle op 17 in 279.2 us (13.15/13.15 Gbps), benchmark overhead 4.4 us
+[  6.897843] CPU 12| <5> node-0 completed shuffle op 18 in 283.6 us (12.94/12.94 Gbps), benchmark overhead 4.1 us
+[  6.898145] CPU 12| <5> node-0 completed shuffle op 19 in 280.4 us (13.09/13.09 Gbps), benchmark overhead 4.0 us
+[  6.898150] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.80, part. skewness 1.00, throughput 13.0 Gbps
+[  6.992278] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist zipf 2.90 --log
+[  7.114380] CPU 12| <5> shuffle matrix:
+[  7.114387] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  7.114394] CPU 12| <5>      0  0.72  1.11     0     0     0     0     0     0     0  8.17   inf
+[  7.114399] CPU 12| <5>      1  0.72  1.09     0     0     0     0     0     0  6.36  1.83   inf
+[  7.114404] CPU 12| <5>      2  0.72  1.08     0     0     0     0     0  4.55  3.64     0   inf
+[  7.114409] CPU 12| <5>      3  0.72  1.09     0     0     0     0  2.74  5.45     0     0   inf
+[  7.114414] CPU 12| <5>      4  0.74  1.09     0     0     0  0.91  7.26     0     0     0   inf
+[  7.114419] CPU 12| <5>      5  0.73  1.11     0     0     0  8.16     0     0     0     0   inf
+[  7.114425] CPU 12| <5>      6  0.72  1.11     0     0  7.24  0.93     0     0     0     0   inf
+[  7.114429] CPU 12| <5>      7  1.30  0.53     0  5.41  2.76     0     0     0     0     0   inf
+[  7.114434] CPU 12| <5>      8  1.81     0  3.61  4.59     0     0     0     0     0     0   inf
+[  7.114439] CPU 12| <5>      9  1.82  1.79  6.39     0     0     0     0     0     0     0   inf
+[  7.114443] CPU 12| <5>    M/m  2.54   inf   inf   inf   inf   inf   inf   inf   inf   inf
+[  7.114444] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  7.114462] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  7.114463] CPU 12| <5> Outbound messages:  0.72  1.11  0.00  0.00  0.00  0.00  0.00  0.00  0.00  8.17     inf
+[  7.114463] CPU 12| <5>  Inbound messages:  0.72  0.72  0.72  0.72  0.74  0.73  0.72  1.30  1.81  1.82    2.54
+[  7.192823] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  7.193197] CPU 12| <5> node-0 completed shuffle op 0 in 285.7 us (12.99/12.99 Gbps), benchmark overhead 5.0 us
+[  7.193507] CPU 01| <5> node-0 completed shuffle op 1 in 286.6 us (12.95/12.95 Gbps), benchmark overhead 5.8 us
+[  7.193990] CPU 12| <5> node-0 completed shuffle op 2 in 459.7 us (8.07/8.07 Gbps), benchmark overhead 4.5 us
+[  7.194313] CPU 12| <5> node-0 completed shuffle op 3 in 282.9 us (13.12/13.12 Gbps), benchmark overhead 4.1 us
+[  7.194610] CPU 12| <5> node-0 completed shuffle op 4 in 275.5 us (13.47/13.47 Gbps), benchmark overhead 4.2 us
+[  7.194915] CPU 12| <5> node-0 completed shuffle op 5 in 282.3 us (13.15/13.15 Gbps), benchmark overhead 4.4 us
+[  7.195229] CPU 12| <5> node-0 completed shuffle op 6 in 293.5 us (12.65/12.65 Gbps), benchmark overhead 4.3 us
+[  7.195539] CPU 12| <5> node-0 completed shuffle op 7 in 289.8 us (12.81/12.81 Gbps), benchmark overhead 3.7 us
+[  7.195869] CPU 01| <5> node-0 completed shuffle op 8 in 286.6 us (12.95/12.95 Gbps), benchmark overhead 5.2 us
+[  7.196179] CPU 12| <5> node-0 completed shuffle op 9 in 289.1 us (12.84/12.84 Gbps), benchmark overhead 4.1 us
+[  7.196611] CPU 12| <5> node-0 completed shuffle op 10 in 359.6 us (10.32/10.32 Gbps), benchmark overhead 54.2 us
+[  7.196915] CPU 12| <5> node-0 completed shuffle op 11 in 282.8 us (13.12/13.12 Gbps), benchmark overhead 3.8 us
+[  7.197211] CPU 12| <5> node-0 completed shuffle op 12 in 274.4 us (13.52/13.52 Gbps), benchmark overhead 4.2 us
+[  7.197518] CPU 12| <5> node-0 completed shuffle op 13 in 285.8 us (12.99/12.99 Gbps), benchmark overhead 4.2 us
+[  7.197824] CPU 12| <5> node-0 completed shuffle op 14 in 285.7 us (12.99/12.99 Gbps), benchmark overhead 4.0 us
+[  7.198128] CPU 12| <5> node-0 completed shuffle op 15 in 283.4 us (13.10/13.10 Gbps), benchmark overhead 3.7 us
+[  7.198442] CPU 12| <5> node-0 completed shuffle op 16 in 288.3 us (12.88/12.88 Gbps), benchmark overhead 4.5 us
+[  7.198749] CPU 12| <5> node-0 completed shuffle op 17 in 286.0 us (12.98/12.98 Gbps), benchmark overhead 4.3 us
+[  7.199053] CPU 12| <5> node-0 completed shuffle op 18 in 282.5 us (13.14/13.14 Gbps), benchmark overhead 4.4 us
+[  7.199360] CPU 01| <5> node-0 completed shuffle op 19 in 285.1 us (13.02/13.02 Gbps), benchmark overhead 5.5 us
+[  7.199366] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. zipf-2.90, part. skewness 1.00, throughput 13.0 Gbps
+[  7.293193] CPU 01| <5> Command: gen_workload --avg-msg-size 50000 --data-dist norm 100.00 --log
+[  7.426247] CPU 01| <5> shuffle matrix:
+[  7.426255] CPU 01| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  7.426264] CPU 01| <5>      0  0.97  1.02  1.02  0.97  0.98  1.02  0.99  0.97  1.01  1.03  1.06
+[  7.426271] CPU 01| <5>      1  0.99  0.99  0.98  1.00  0.99  1.06  0.99  1.01  0.97  1.02  1.09
+[  7.426278] CPU 01| <5>      2  1.02  0.99  0.98  0.99  1.01  1.00  0.98  1.03  1.00  1.00  1.05
+[  7.426285] CPU 01| <5>      3  0.97  0.99  0.99  1.02  1.03  0.97  0.99  1.01  1.01  1.01  1.06
+[  7.426291] CPU 01| <5>      4  1.01  0.96  1.02  0.98  1.05  0.99  1.01  1.00  1.00  0.99  1.09
+[  7.426298] CPU 01| <5>      5  1.01  1.01  1.01  1.00  1.02  0.98  1.00  1.00  0.98  0.99  1.04
+[  7.426304] CPU 01| <5>      6  1.00  1.01  0.95  1.02  1.01  0.99  1.00  1.00  1.02  1.00  1.07
+[  7.426311] CPU 01| <5>      7  1.01  1.00  1.02  1.03  0.97  0.99  1.01  0.99  1.02  0.97  1.07
+[  7.426318] CPU 01| <5>      8  1.00  1.03  1.01  0.99  0.98  0.99  1.03  0.98  1.00  0.99  1.06
+[  7.426324] CPU 01| <5>      9  1.02  1.00  1.03  0.99  0.98  1.01  1.00  0.99  0.98  1.00  1.05
+[  7.426330] CPU 01| <5>    M/m  1.05  1.08  1.08  1.06  1.08  1.09  1.05  1.06  1.06  1.07
+[  7.426331] CPU 01| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  7.426348] CPU 01| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  7.426349] CPU 01| <5> Outbound messages:  0.97  1.02  1.02  0.97  0.98  1.02  0.99  0.97  1.01  1.03    1.06
+[  7.426350] CPU 01| <5>  Inbound messages:  0.97  0.99  1.02  0.97  1.01  1.01  1.00  1.01  1.00  1.02    1.05
+[  7.493660] CPU 01| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  7.493932] CPU 01| <5> node-0 completed shuffle op 0 in 177.0 us (20.40/20.40 Gbps), benchmark overhead 14.0 us
+[  7.494164] CPU 12| <5> node-0 completed shuffle op 1 in 176.8 us (20.43/20.43 Gbps), benchmark overhead 12.8 us
+[  7.494370] CPU 01| <5> node-0 completed shuffle op 2 in 176.2 us (20.49/20.49 Gbps), benchmark overhead 11.5 us
+[  7.494577] CPU 02| <5> node-0 completed shuffle op 3 in 174.6 us (20.68/20.68 Gbps), benchmark overhead 13.6 us
+[  7.494786] CPU 01| <5> node-0 completed shuffle op 4 in 174.2 us (20.72/20.72 Gbps), benchmark overhead 14.0 us
+[  7.494992] CPU 12| <5> node-0 completed shuffle op 5 in 174.2 us (20.73/20.73 Gbps), benchmark overhead 13.0 us
+[  7.495197] CPU 01| <5> node-0 completed shuffle op 6 in 175.2 us (20.61/20.61 Gbps), benchmark overhead 12.7 us
+[  7.495401] CPU 12| <5> node-0 completed shuffle op 7 in 174.0 us (20.75/20.75 Gbps), benchmark overhead 11.4 us
+[  7.495609] CPU 12| <5> node-0 completed shuffle op 8 in 178.8 us (20.20/20.20 Gbps), benchmark overhead 11.0 us
+[  7.495817] CPU 12| <5> node-0 completed shuffle op 9 in 176.0 us (20.52/20.52 Gbps), benchmark overhead 13.6 us
+[  7.496021] CPU 01| <5> node-0 completed shuffle op 10 in 175.1 us (20.62/20.62 Gbps), benchmark overhead 11.6 us
+[  7.496226] CPU 01| <5> node-0 completed shuffle op 11 in 173.5 us (20.81/20.81 Gbps), benchmark overhead 12.5 us
+[  7.496458] CPU 12| <5> node-0 completed shuffle op 12 in 173.6 us (20.80/20.80 Gbps), benchmark overhead 13.8 us
+[  7.496681] CPU 11| <5> node-0 completed shuffle op 13 in 173.2 us (20.85/20.85 Gbps), benchmark overhead 13.7 us
+[  7.496900] CPU 02| <5> node-0 completed shuffle op 14 in 175.1 us (20.63/20.63 Gbps), benchmark overhead 12.1 us
+[  7.497106] CPU 11| <5> node-0 completed shuffle op 15 in 173.2 us (20.85/20.85 Gbps), benchmark overhead 13.8 us
+[  7.497315] CPU 01| <5> node-0 completed shuffle op 16 in 175.3 us (20.60/20.60 Gbps), benchmark overhead 14.6 us
+[  7.497520] CPU 02| <5> node-0 completed shuffle op 17 in 174.9 us (20.64/20.64 Gbps), benchmark overhead 12.5 us
+[  7.497724] CPU 02| <5> node-0 completed shuffle op 18 in 173.4 us (20.82/20.82 Gbps), benchmark overhead 13.4 us
+[  7.497933] CPU 12| <5> node-0 completed shuffle op 19 in 173.8 us (20.77/20.77 Gbps), benchmark overhead 12.4 us
+[  7.497939] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. norm-100.00, part. skewness 1.00, throughput 20.7 Gbps
+[  7.594030] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist norm 22.36 --log
+[  7.729941] CPU 12| <5> shuffle matrix:
+[  7.729947] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  7.729956] CPU 12| <5>      0  0.92  1.00  0.97  0.97  1.04  1.06  0.98  0.99  1.03  1.03  1.15
+[  7.729963] CPU 12| <5>      1  1.01  0.90  0.98  1.10  0.90  1.09  0.99  1.01  0.99  1.03  1.23
+[  7.729970] CPU 12| <5>      2  1.03  0.91  1.08  0.99  0.87  1.07  0.98  1.01  1.03  1.02  1.24
+[  7.729976] CPU 12| <5>      3  0.98  1.02  0.99  1.01  0.89  1.04  0.99  1.00  1.04  1.03  1.17
+[  7.729983] CPU 12| <5>      4  1.01  1.01  1.01  0.97  1.01  0.95  1.00  0.99  1.04  1.01  1.09
+[  7.729989] CPU 12| <5>      5  1.01  1.05  1.01  0.99  1.07  0.87  1.00  0.99  1.01  1.00  1.22
+[  7.729996] CPU 12| <5>      6  1.00  1.03  0.96  0.98  1.08  0.89  1.00  1.07  0.98  1.02  1.21
+[  7.730003] CPU 12| <5>      7  1.01  1.02  1.01  1.02  1.04  0.93  1.09  0.99  0.92  0.98  1.18
+[  7.730009] CPU 12| <5>      8  1.01  1.05  0.99  0.99  1.05  1.04  1.00  0.96  0.99  0.93  1.13
+[  7.730016] CPU 12| <5>      9  1.02  1.02  1.01  0.98  1.06  1.04  0.98  0.99  0.96  0.94  1.13
+[  7.730022] CPU 12| <5>    M/m  1.12  1.17  1.12  1.13  1.24  1.25  1.11  1.11  1.13  1.11
+[  7.730023] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  7.730040] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  7.730041] CPU 12| <5> Outbound messages:  0.92  1.00  0.97  0.97  1.04  1.06  0.98  0.99  1.03  1.03    1.15
+[  7.730042] CPU 12| <5>  Inbound messages:  0.92  1.01  1.03  0.98  1.01  1.01  1.00  1.01  1.01  1.02    1.12
+[  7.794613] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  7.794943] CPU 01| <5> node-0 completed shuffle op 0 in 180.7 us (20.10/20.10 Gbps), benchmark overhead 68.8 us
+[  7.795154] CPU 01| <5> node-0 completed shuffle op 1 in 176.4 us (20.58/20.58 Gbps), benchmark overhead 14.9 us
+[  7.795362] CPU 12| <5> node-0 completed shuffle op 2 in 177.4 us (20.47/20.47 Gbps), benchmark overhead 12.1 us
+[  7.795571] CPU 01| <5> node-0 completed shuffle op 3 in 179.0 us (20.28/20.28 Gbps), benchmark overhead 11.3 us
+[  7.795780] CPU 12| <5> node-0 completed shuffle op 4 in 177.1 us (20.50/20.50 Gbps), benchmark overhead 13.2 us
+[  7.796148] CPU 01| <5> node-0 completed shuffle op 5 in 335.9 us (10.81/10.81 Gbps), benchmark overhead 14.3 us
+[  7.796353] CPU 12| <5> node-0 completed shuffle op 6 in 175.5 us (20.70/20.70 Gbps), benchmark overhead 11.5 us
+[  7.796559] CPU 01| <5> node-0 completed shuffle op 7 in 176.9 us (20.53/20.53 Gbps), benchmark overhead 11.6 us
+[  7.796765] CPU 11| <5> node-0 completed shuffle op 8 in 176.6 us (20.56/20.56 Gbps), benchmark overhead 11.2 us
+[  7.796974] CPU 02| <5> node-0 completed shuffle op 9 in 177.2 us (20.50/20.50 Gbps), benchmark overhead 12.7 us
+[  7.797182] CPU 01| <5> node-0 completed shuffle op 10 in 175.0 us (20.75/20.75 Gbps), benchmark overhead 14.5 us
+[  7.797389] CPU 12| <5> node-0 completed shuffle op 11 in 175.5 us (20.70/20.70 Gbps), benchmark overhead 13.4 us
+[  7.797596] CPU 12| <5> node-0 completed shuffle op 12 in 175.3 us (20.71/20.71 Gbps), benchmark overhead 12.9 us
+[  7.797802] CPU 01| <5> node-0 completed shuffle op 13 in 175.4 us (20.71/20.71 Gbps), benchmark overhead 13.1 us
+[  7.798006] CPU 01| <5> node-0 completed shuffle op 14 in 174.1 us (20.86/20.86 Gbps), benchmark overhead 13.0 us
+[  7.798211] CPU 01| <5> node-0 completed shuffle op 15 in 174.4 us (20.82/20.82 Gbps), benchmark overhead 12.3 us
+[  7.798447] CPU 11| <5> node-0 completed shuffle op 16 in 175.8 us (20.65/20.65 Gbps), benchmark overhead 11.3 us
+[  7.798650] CPU 12| <5> node-0 completed shuffle op 17 in 173.4 us (20.95/20.95 Gbps), benchmark overhead 12.6 us
+[  7.798873] CPU 01| <5> node-0 completed shuffle op 18 in 175.3 us (20.72/20.72 Gbps), benchmark overhead 11.5 us
+[  7.799077] CPU 11| <5> node-0 completed shuffle op 19 in 173.7 us (20.91/20.91 Gbps), benchmark overhead 12.5 us
+[  7.799083] CPU 11| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. norm-22.36, part. skewness 1.00, throughput 20.7 Gbps
+[  7.894982] CPU 11| <5> Command: gen_workload --avg-msg-size 50000 --data-dist norm 10.00 --log
+[  8.025453] CPU 11| <5> shuffle matrix:
+[  8.025460] CPU 11| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  8.025469] CPU 11| <5>      0  0.86  1.12  0.94  1.06  0.81  1.18  0.74  1.10  1.10  1.08  1.59
+[  8.025476] CPU 11| <5>      1  0.89  1.08  0.91  1.10  0.80  1.21  0.75  1.29  0.88  1.08  1.73
+[  8.025483] CPU 11| <5>      2  0.90  1.10  0.91  1.09  0.78  1.19  0.99  1.05  0.93  1.06  1.52
+[  8.025489] CPU 11| <5>      3  1.03  0.92  0.92  1.12  0.79  1.17  1.10  0.94  0.94  1.07  1.49
+[  8.025496] CPU 11| <5>      4  1.05  0.90  0.95  1.08  0.90  1.10  1.11  0.92  0.93  1.05  1.24
+[  8.025502] CPU 11| <5>      5  1.06  0.94  0.94  1.10  1.20  0.78  1.11  0.93  0.90  1.05  1.54
+[  8.025509] CPU 11| <5>      6  1.05  0.91  0.91  1.08  1.20  0.80  1.11  0.93  1.04  0.97  1.50
+[  8.025516] CPU 11| <5>      7  1.05  0.92  1.19  0.88  1.17  0.78  1.11  0.94  1.10  0.87  1.52
+[  8.025522] CPU 11| <5>      8  1.05  0.94  1.28  0.74  1.17  0.79  1.12  0.94  1.10  0.88  1.73
+[  8.025529] CPU 11| <5>      9  1.06  1.18  1.04  0.74  1.18  1.00  0.87  0.96  1.07  0.89  1.59
+[  8.025535] CPU 11| <5>    M/m  1.23  1.32  1.41  1.51  1.53  1.56  1.50  1.40  1.25  1.24
+[  8.025536] CPU 11| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  8.025553] CPU 11| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  8.025578] CPU 11| <5> Outbound messages:  0.86  1.12  0.94  1.06  0.81  1.18  0.74  1.10  1.10  1.08    1.59
+[  8.025580] CPU 11| <5>  Inbound messages:  0.86  0.89  0.90  1.03  1.05  1.06  1.05  1.05  1.05  1.06    1.23
+[  8.095526] CPU 11| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  8.095843] CPU 01| <5> node-0 completed shuffle op 0 in 182.9 us (19.98/19.98 Gbps), benchmark overhead 51.9 us
+[  8.096053] CPU 01| <5> node-0 completed shuffle op 1 in 176.4 us (20.72/20.72 Gbps), benchmark overhead 13.2 us
+[  8.096261] CPU 01| <5> node-0 completed shuffle op 2 in 175.7 us (20.80/20.80 Gbps), benchmark overhead 13.8 us
+[  8.096468] CPU 01| <5> node-0 completed shuffle op 3 in 176.0 us (20.77/20.77 Gbps), benchmark overhead 13.3 us
+[  8.096676] CPU 01| <5> node-0 completed shuffle op 4 in 176.7 us (20.68/20.68 Gbps), benchmark overhead 12.6 us
+[  8.096883] CPU 01| <5> node-0 completed shuffle op 5 in 175.1 us (20.87/20.87 Gbps), benchmark overhead 14.1 us
+[  8.097090] CPU 12| <5> node-0 completed shuffle op 6 in 176.2 us (20.74/20.74 Gbps), benchmark overhead 12.8 us
+[  8.097297] CPU 01| <5> node-0 completed shuffle op 7 in 175.2 us (20.87/20.87 Gbps), benchmark overhead 13.6 us
+[  8.097503] CPU 01| <5> node-0 completed shuffle op 8 in 175.5 us (20.83/20.83 Gbps), benchmark overhead 12.4 us
+[  8.097710] CPU 12| <5> node-0 completed shuffle op 9 in 177.0 us (20.65/20.65 Gbps), benchmark overhead 12.5 us
+[  8.097915] CPU 12| <5> node-0 completed shuffle op 10 in 177.5 us (20.59/20.59 Gbps), benchmark overhead 9.7 us
+[  8.098121] CPU 01| <5> node-0 completed shuffle op 11 in 175.7 us (20.80/20.80 Gbps), benchmark overhead 12.3 us
+[  8.098328] CPU 01| <5> node-0 completed shuffle op 12 in 176.2 us (20.74/20.74 Gbps), benchmark overhead 12.6 us
+[  8.098535] CPU 12| <5> node-0 completed shuffle op 13 in 176.3 us (20.73/20.73 Gbps), benchmark overhead 13.0 us
+[  8.098743] CPU 12| <5> node-0 completed shuffle op 14 in 177.2 us (20.63/20.63 Gbps), benchmark overhead 11.8 us
+[  8.098949] CPU 01| <5> node-0 completed shuffle op 15 in 175.5 us (20.83/20.83 Gbps), benchmark overhead 13.0 us
+[  8.099157] CPU 01| <5> node-0 completed shuffle op 16 in 176.7 us (20.68/20.68 Gbps), benchmark overhead 12.9 us
+[  8.099363] CPU 01| <5> node-0 completed shuffle op 17 in 177.3 us (20.62/20.62 Gbps), benchmark overhead 11.3 us
+[  8.099568] CPU 12| <5> node-0 completed shuffle op 18 in 175.5 us (20.83/20.83 Gbps), benchmark overhead 11.9 us
+[  8.099774] CPU 11| <5> node-0 completed shuffle op 19 in 179.8 us (20.33/20.33 Gbps), benchmark overhead 8.6 us
+[  8.099781] CPU 11| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. norm-10.00, part. skewness 1.00, throughput 20.7 Gbps
+[  8.195890] CPU 11| <5> Command: gen_workload --avg-msg-size 50000 --data-dist norm 3.16 --log
+[  8.325949] CPU 11| <5> shuffle matrix:
+[  8.325956] CPU 11| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  8.325964] CPU 11| <5>      0  0.75  0.58  0.81  1.05  1.18  1.24  1.20  1.02  0.81  1.35  2.34
+[  8.325971] CPU 11| <5>      1  0.78  0.76  0.98  0.62  1.21  1.28  1.21  1.04  0.79  1.35  2.19
+[  8.325978] CPU 11| <5>      2  0.79  1.37  1.00     0  1.21  1.24  1.19  1.04  0.81  1.35   inf
+[  8.325986] CPU 11| <5>      3  0.75  1.37  1.03  1.19  0.02  1.25  1.19  1.03  0.82  1.35 84.37
+[  8.325993] CPU 11| <5>      4  0.77  1.36  1.04  1.18  0.11  1.17  1.19  1.03  1.39  0.76 12.88
+[  8.325999] CPU 11| <5>      5  0.82  1.35  1.04  1.20  1.27     0  1.18  1.03  1.35  0.77   inf
+[  8.326006] CPU 11| <5>      6  1.33  0.79  1.00  1.19  1.27  0.23  0.98  1.02  1.40  0.78  6.20
+[  8.326012] CPU 11| <5>      7  1.32  0.80  1.05  1.21  1.26  1.19     0  1.03  1.40  0.75   inf
+[  8.326018] CPU 11| <5>      8  1.34  0.82  1.02  1.18  1.24  1.21  0.81  0.94  0.68  0.76  1.98
+[  8.326025] CPU 11| <5>      9  1.35  0.80  1.05  1.19  1.24  1.20  1.05  0.80  0.56  0.77  2.40
+[  8.326031] CPU 11| <5>    M/m  1.79  2.37  1.30   inf 78.63   inf   inf  1.30  2.49  1.80
+[  8.326050] CPU 11| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  8.326067] CPU 11| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  8.326068] CPU 11| <5> Outbound messages:  0.75  0.58  0.81  1.05  1.18  1.24  1.20  1.02  0.81  1.35    2.34
+[  8.326069] CPU 11| <5>  Inbound messages:  0.75  0.78  0.79  0.75  0.77  0.82  1.33  1.32  1.34  1.35    1.79
+[  8.396430] CPU 11| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  8.396744] CPU 01| <5> node-0 completed shuffle op 0 in 187.5 us (19.72/19.72 Gbps), benchmark overhead 42.7 us
+[  8.396969] CPU 12| <5> node-0 completed shuffle op 1 in 189.1 us (19.56/19.56 Gbps), benchmark overhead 15.6 us
+[  8.397371] CPU 01| <5> node-0 completed shuffle op 2 in 362.1 us (10.21/10.21 Gbps), benchmark overhead 20.9 us
+[  8.397590] CPU 01| <5> node-0 completed shuffle op 3 in 186.5 us (19.83/19.83 Gbps), benchmark overhead 15.3 us
+[  8.397814] CPU 01| <5> node-0 completed shuffle op 4 in 190.0 us (19.47/19.47 Gbps), benchmark overhead 16.3 us
+[  8.398038] CPU 01| <5> node-0 completed shuffle op 5 in 189.4 us (19.53/19.53 Gbps), benchmark overhead 16.3 us
+[  8.398255] CPU 12| <5> node-0 completed shuffle op 6 in 187.1 us (19.77/19.77 Gbps), benchmark overhead 12.8 us
+[  8.398475] CPU 12| <5> node-0 completed shuffle op 7 in 187.9 us (19.68/19.68 Gbps), benchmark overhead 14.1 us
+[  8.398697] CPU 12| <5> node-0 completed shuffle op 8 in 187.6 us (19.71/19.71 Gbps), benchmark overhead 16.0 us
+[  8.398915] CPU 01| <5> node-0 completed shuffle op 9 in 185.8 us (19.90/19.90 Gbps), benchmark overhead 14.3 us
+[  8.399135] CPU 12| <5> node-0 completed shuffle op 10 in 186.8 us (19.80/19.80 Gbps), benchmark overhead 14.2 us
+[  8.399353] CPU 12| <5> node-0 completed shuffle op 11 in 188.3 us (19.64/19.64 Gbps), benchmark overhead 12.4 us
+[  8.399572] CPU 01| <5> node-0 completed shuffle op 12 in 187.2 us (19.76/19.76 Gbps), benchmark overhead 13.4 us
+[  8.399791] CPU 01| <5> node-0 completed shuffle op 13 in 187.4 us (19.73/19.73 Gbps), benchmark overhead 13.1 us
+[  8.400009] CPU 11| <5> node-0 completed shuffle op 14 in 185.6 us (19.92/19.92 Gbps), benchmark overhead 14.0 us
+[  8.400230] CPU 01| <5> node-0 completed shuffle op 15 in 189.3 us (19.54/19.54 Gbps), benchmark overhead 14.0 us
+[  8.400448] CPU 01| <5> node-0 completed shuffle op 16 in 189.1 us (19.56/19.56 Gbps), benchmark overhead 10.4 us
+[  8.400666] CPU 01| <5> node-0 completed shuffle op 17 in 186.9 us (19.79/19.79 Gbps), benchmark overhead 13.3 us
+[  8.400883] CPU 01| <5> node-0 completed shuffle op 18 in 186.9 us (19.79/19.79 Gbps), benchmark overhead 12.7 us
+[  8.401102] CPU 12| <5> node-0 completed shuffle op 19 in 187.3 us (19.74/19.74 Gbps), benchmark overhead 14.5 us
+[  8.401108] CPU 12| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. norm-3.16, part. skewness 1.00, throughput 19.7 Gbps
+[  8.496796] CPU 12| <5> Command: gen_workload --avg-msg-size 50000 --data-dist norm 1.00 --log
+[  8.621372] CPU 12| <5> shuffle matrix:
+[  8.621379] CPU 12| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  8.621386] CPU 12| <5>      0  0.65     0  1.69  0.77     0     0  3.79     0     0  3.11   inf
+[  8.621392] CPU 12| <5>      1  0.67     0  2.37     0     0     0  3.87     0  1.52  1.57   inf
+[  8.621398] CPU 12| <5>      2  0.68     0  2.38     0     0  2.44  1.38     0  2.44  0.68   inf
+[  8.621403] CPU 12| <5>      3  0.66     0  2.39     0     0  3.83     0     0  2.45  0.68   inf
+[  8.621409] CPU 12| <5>      4  0.67  1.25  1.16     0  0.10  3.73     0     0  2.43  0.66   inf
+[  8.621415] CPU 12| <5>      5  0.68  2.45     0     0  3.83     0     0  1.22  1.16  0.67   inf
+[  8.621420] CPU 12| <5>      6  0.66  2.38     0     0  3.85     0     0  2.44     0  0.68   inf
+[  8.621426] CPU 12| <5>      7  0.66  2.41     0  1.61  2.22     0     0  2.43     0  0.65   inf
+[  8.621454] CPU 12| <5>      8  1.58  1.51     0  3.81     0     0     0  2.44     0  0.66   inf
+[  8.621460] CPU 12| <5>      9  3.10     0     0  3.81     0     0  0.96  1.47     0  0.66   inf
+[  8.621464] CPU 12| <5>    M/m  4.79   inf   inf   inf   inf   inf   inf   inf   inf  4.78
+[  8.621465] CPU 12| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  8.621483] CPU 12| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  8.621484] CPU 12| <5> Outbound messages:  0.65  0.00  1.69  0.77  0.00  0.00  3.79  0.00  0.00  3.11     inf
+[  8.621485] CPU 12| <5>  Inbound messages:  0.65  0.67  0.68  0.66  0.67  0.68  0.66  0.66  1.58  3.10    4.79
+[  8.697349] CPU 12| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  8.697654] CPU 12| <5> node-0 completed shuffle op 0 in 215.2 us (17.39/17.39 Gbps), benchmark overhead 10.4 us
+[  8.697894] CPU 01| <5> node-0 completed shuffle op 1 in 201.3 us (18.58/18.58 Gbps), benchmark overhead 19.9 us
+[  8.698140] CPU 01| <5> node-0 completed shuffle op 2 in 205.4 us (18.22/18.22 Gbps), benchmark overhead 20.0 us
+[  8.698381] CPU 01| <5> node-0 completed shuffle op 3 in 207.0 us (18.07/18.07 Gbps), benchmark overhead 16.3 us
+[  8.698618] CPU 01| <5> node-0 completed shuffle op 4 in 206.8 us (18.09/18.09 Gbps), benchmark overhead 12.8 us
+[  8.698857] CPU 01| <5> node-0 completed shuffle op 5 in 200.6 us (18.65/18.65 Gbps), benchmark overhead 20.0 us
+[  8.699096] CPU 12| <5> node-0 completed shuffle op 6 in 199.3 us (18.77/18.77 Gbps), benchmark overhead 21.1 us
+[  8.699334] CPU 01| <5> node-0 completed shuffle op 7 in 200.5 us (18.66/18.66 Gbps), benchmark overhead 20.0 us
+[  8.699573] CPU 01| <5> node-0 completed shuffle op 8 in 202.2 us (18.50/18.50 Gbps), benchmark overhead 18.5 us
+[  8.699813] CPU 01| <5> node-0 completed shuffle op 9 in 206.2 us (18.15/18.15 Gbps), benchmark overhead 15.5 us
+[  8.700053] CPU 12| <5> node-0 completed shuffle op 10 in 198.8 us (18.81/18.81 Gbps), benchmark overhead 23.6 us
+[  8.700294] CPU 01| <5> node-0 completed shuffle op 11 in 210.6 us (17.77/17.77 Gbps), benchmark overhead 13.1 us
+[  8.700532] CPU 01| <5> node-0 completed shuffle op 12 in 200.7 us (18.64/18.64 Gbps), benchmark overhead 19.7 us
+[  8.700774] CPU 01| <5> node-0 completed shuffle op 13 in 204.7 us (18.27/18.27 Gbps), benchmark overhead 19.1 us
+[  8.701011] CPU 01| <5> node-0 completed shuffle op 14 in 200.1 us (18.70/18.70 Gbps), benchmark overhead 18.9 us
+[  8.701248] CPU 01| <5> node-0 completed shuffle op 15 in 199.9 us (18.71/18.71 Gbps), benchmark overhead 19.6 us
+[  8.701484] CPU 01| <5> node-0 completed shuffle op 16 in 196.9 us (19.00/19.00 Gbps), benchmark overhead 21.3 us
+[  8.701721] CPU 01| <5> node-0 completed shuffle op 17 in 205.9 us (18.17/18.17 Gbps), benchmark overhead 14.3 us
+[  8.701959] CPU 01| <5> node-0 completed shuffle op 18 in 198.7 us (18.83/18.83 Gbps), benchmark overhead 21.7 us
+[  8.702194] CPU 01| <5> node-0 completed shuffle op 19 in 206.9 us (18.09/18.09 Gbps), benchmark overhead 11.0 us
+[  8.702200] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. norm-1.00, part. skewness 1.00, throughput 18.6 Gbps
+[  8.797702] CPU 01| <5> Command: gen_workload --avg-msg-size 50000 --data-dist norm 0.71 --log
+[  8.914850] CPU 01| <5> shuffle matrix:
+[  8.914856] CPU 01| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  8.914864] CPU 01| <5>      0  0.16     0  2.24     0     0     0     0  5.16     0  2.44   inf
+[  8.914869] CPU 01| <5>      1  0.17  0.44  1.76     0     0     0  4.55  0.67     0  2.41   inf
+[  8.914875] CPU 01| <5>      2  0.17  2.25     0     0     0     0  5.15     0     0  2.43   inf
+[  8.914880] CPU 01| <5>      3  0.17  2.20     0     0     0  4.88  0.30     0  0.76  1.69   inf
+[  8.914886] CPU 01| <5>      4  0.18  2.21     0     0  0.08  5.12     0     0  2.25  0.16   inf
+[  8.914891] CPU 01| <5>      5  0.18  2.26     0     0  5.18     0     0     0  2.20  0.18   inf
+[  8.914919] CPU 01| <5>      6  1.74  0.64     0  0.44  4.74     0     0     0  2.26  0.17   inf
+[  8.914924] CPU 01| <5>      7  2.40     0     0  5.19     0     0     0     0  2.24  0.18   inf
+[  8.914930] CPU 01| <5>      8  2.42     0  0.82  4.36     0     0     0  1.94  0.29  0.18   inf
+[  8.914935] CPU 01| <5>      9  2.41     0  5.18     0     0     0     0  2.24     0  0.17   inf
+[  8.914940] CPU 01| <5>    M/m 14.66   inf   inf   inf   inf   inf   inf   inf   inf 14.87
+[  8.914942] CPU 01| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  8.914959] CPU 01| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  8.914960] CPU 01| <5> Outbound messages:  0.16  0.00  2.24  0.00  0.00  0.00  0.00  5.16  0.00  2.44     inf
+[  8.914961] CPU 01| <5>  Inbound messages:  0.16  0.17  0.17  0.17  0.18  0.18  1.74  2.40  2.42  2.41   14.66
+[  8.998257] CPU 01| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  8.998582] CPU 01| <5> node-0 completed shuffle op 0 in 231.3 us (17.01/17.01 Gbps), benchmark overhead 17.8 us
+[  8.998847] CPU 01| <5> node-0 completed shuffle op 1 in 230.5 us (17.07/17.07 Gbps), benchmark overhead 15.3 us
+[  8.999115] CPU 01| <5> node-0 completed shuffle op 2 in 227.7 us (17.28/17.28 Gbps), benchmark overhead 21.4 us
+[  8.999376] CPU 01| <5> node-0 completed shuffle op 3 in 229.8 us (17.12/17.12 Gbps), benchmark overhead 13.3 us
+[  8.999637] CPU 01| <5> node-0 completed shuffle op 4 in 228.8 us (17.19/17.19 Gbps), benchmark overhead 14.7 us
+[  8.999900] CPU 01| <5> node-0 completed shuffle op 5 in 233.2 us (16.87/16.87 Gbps), benchmark overhead 13.1 us
+[  9.000162] CPU 01| <5> node-0 completed shuffle op 6 in 231.3 us (17.00/17.00 Gbps), benchmark overhead 12.4 us
+[  9.000422] CPU 01| <5> node-0 completed shuffle op 7 in 224.8 us (17.50/17.50 Gbps), benchmark overhead 17.9 us
+[  9.000679] CPU 01| <5> node-0 completed shuffle op 8 in 227.6 us (17.29/17.29 Gbps), benchmark overhead 11.9 us
+[  9.000939] CPU 01| <5> node-0 completed shuffle op 9 in 233.0 us (16.89/16.89 Gbps), benchmark overhead 8.8 us
+[  9.001203] CPU 01| <5> node-0 completed shuffle op 10 in 229.8 us (17.12/17.12 Gbps), benchmark overhead 17.1 us
+[  9.001462] CPU 01| <5> node-0 completed shuffle op 11 in 227.2 us (17.31/17.31 Gbps), benchmark overhead 14.3 us
+[  9.001721] CPU 01| <5> node-0 completed shuffle op 12 in 226.8 us (17.34/17.34 Gbps), benchmark overhead 15.1 us
+[  9.001982] CPU 01| <5> node-0 completed shuffle op 13 in 227.4 us (17.30/17.30 Gbps), benchmark overhead 16.0 us
+[  9.002245] CPU 01| <5> node-0 completed shuffle op 14 in 224.4 us (17.53/17.53 Gbps), benchmark overhead 21.0 us
+[  9.002506] CPU 01| <5> node-0 completed shuffle op 15 in 228.3 us (17.23/17.23 Gbps), benchmark overhead 15.7 us
+[  9.002766] CPU 01| <5> node-0 completed shuffle op 16 in 227.8 us (17.27/17.27 Gbps), benchmark overhead 14.5 us
+[  9.003026] CPU 01| <5> node-0 completed shuffle op 17 in 224.5 us (17.53/17.53 Gbps), benchmark overhead 18.9 us
+[  9.003287] CPU 01| <5> node-0 completed shuffle op 18 in 227.1 us (17.32/17.32 Gbps), benchmark overhead 15.7 us
+[  9.003551] CPU 01| <5> node-0 completed shuffle op 19 in 228.0 us (17.26/17.26 Gbps), benchmark overhead 18.9 us
+[  9.003557] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. norm-0.71, part. skewness 1.00, throughput 17.3 Gbps
+[  9.098614] CPU 01| <5> Command: gen_workload --avg-msg-size 50000 --data-dist norm 0.32 --log
+[  9.196880] CPU 01| <5> shuffle matrix:
+[  9.196886] CPU 01| <5>  Rank:     0     1     2     3     4     5     6     7     8     9   M/m
+[  9.196893] CPU 01| <5>      0  0.57     0     0     0     0     0     0     0  4.77  4.66   inf
+[  9.196898] CPU 01| <5>      1  0.59     0     0     0     0     0     0  3.57  5.23  0.61   inf
+[  9.196903] CPU 01| <5>      2  0.60     0     0     0     0     0  2.37  6.43     0  0.60   inf
+[  9.196908] CPU 01| <5>      3  0.58     0     0     0     0  1.18  7.63     0     0  0.60   inf
+[  9.196934] CPU 01| <5>      4  0.59     0     0     0  0.01  8.82     0     0     0  0.59   inf
+[  9.196939] CPU 01| <5>      5  0.60     0     0     0  8.80     0     0     0     0  0.60   inf
+[  9.196944] CPU 01| <5>      6  0.59     0     0  7.63  1.19     0     0     0     0  0.60   inf
+[  9.196949] CPU 01| <5>      7  0.59     0  6.45  2.37     0     0     0     0     0  0.58   inf
+[  9.196954] CPU 01| <5>      8  0.58  5.29  3.55     0     0     0     0     0     0  0.58   inf
+[  9.196959] CPU 01| <5>      9  4.71  4.71     0     0     0     0     0     0     0  0.58   inf
+[  9.196963] CPU 01| <5>    M/m  8.23   inf   inf   inf   inf   inf   inf   inf   inf  8.09
+[  9.196964] CPU 01| <5> total TX bytes 500000, total RX bytes 500000, avg. message size 50000
+[  9.196981] CPU 01| <5>              Rank:     0     1     2     3     4     5     6     7     8     9 Max/Min
+[  9.196982] CPU 01| <5> Outbound messages:  0.57  0.00  0.00  0.00  0.00  0.00  0.00  0.00  4.77  4.66     inf
+[  9.196983] CPU 01| <5>  Inbound messages:  0.57  0.59  0.60  0.58  0.59  0.60  0.59  0.59  0.58  4.71    8.23
+[  9.299183] CPU 01| <5> Command: run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20
+[  9.299556] CPU 01| <5> node-0 completed shuffle op 0 in 223.1 us (16.90/16.90 Gbps), benchmark overhead 65.3 us
+[  9.299854] CPU 12| <5> node-0 completed shuffle op 1 in 216.8 us (17.40/17.40 Gbps), benchmark overhead 62.3 us
+[  9.300158] CPU 12| <5> node-0 completed shuffle op 2 in 213.0 us (17.70/17.70 Gbps), benchmark overhead 71.7 us
+[  9.300455] CPU 01| <5> node-0 completed shuffle op 3 in 216.2 us (17.44/17.44 Gbps), benchmark overhead 64.1 us
+[  9.300748] CPU 01| <5> node-0 completed shuffle op 4 in 219.0 us (17.22/17.22 Gbps), benchmark overhead 55.6 us
+[  9.301042] CPU 01| <5> node-0 completed shuffle op 5 in 215.2 us (17.52/17.52 Gbps), benchmark overhead 59.9 us
+[  9.301334] CPU 12| <5> node-0 completed shuffle op 6 in 220.6 us (17.09/17.09 Gbps), benchmark overhead 53.2 us
+[  9.301627] CPU 01| <5> node-0 completed shuffle op 7 in 217.4 us (17.35/17.35 Gbps), benchmark overhead 58.7 us
+[  9.301923] CPU 01| <5> node-0 completed shuffle op 8 in 212.0 us (17.78/17.78 Gbps), benchmark overhead 65.5 us
+[  9.302222] CPU 01| <5> node-0 completed shuffle op 9 in 213.9 us (17.63/17.63 Gbps), benchmark overhead 66.6 us
+[  9.302513] CPU 01| <5> node-0 completed shuffle op 10 in 215.4 us (17.51/17.51 Gbps), benchmark overhead 58.1 us
+[  9.302806] CPU 12| <5> node-0 completed shuffle op 11 in 211.9 us (17.80/17.80 Gbps), benchmark overhead 64.2 us
+[  9.303102] CPU 01| <5> node-0 completed shuffle op 12 in 225.0 us (16.76/16.76 Gbps), benchmark overhead 51.4 us
+[  9.303395] CPU 12| <5> node-0 completed shuffle op 13 in 214.4 us (17.59/17.59 Gbps), benchmark overhead 60.5 us
+[  9.303687] CPU 01| <5> node-0 completed shuffle op 14 in 216.7 us (17.40/17.40 Gbps), benchmark overhead 57.0 us
+[  9.303979] CPU 01| <5> node-0 completed shuffle op 15 in 216.5 us (17.42/17.42 Gbps), benchmark overhead 57.7 us
+[  9.304629] CPU 12| <5> node-0 completed shuffle op 16 in 220.2 us (17.12/17.12 Gbps), benchmark overhead 56.3 us
+[  9.304920] CPU 01| <5> node-0 completed shuffle op 17 in 217.4 us (17.35/17.35 Gbps), benchmark overhead 55.5 us
+[  9.305215] CPU 12| <5> node-0 completed shuffle op 18 in 214.0 us (17.62/17.62 Gbps), benchmark overhead 63.7 us
+[  9.305503] CPU 01| <5> node-0 completed shuffle op 19 in 208.9 us (18.05/18.05 Gbps), benchmark overhead 61.7 us
+[  9.305509] CPU 01| <5> node-0 collected 20 data points, policy GRPT, max active 10000, cluster size 10, avg. msg size 50000, data dist. norm-0.32, part. skewness 1.00, throughput 17.4 Gbps
+[  9.399560] CPU 01| <5> Command: exit
+[  9.399562] CPU 01| <5> shuffle_node exiting (exit command)

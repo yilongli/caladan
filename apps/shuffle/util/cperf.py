@@ -68,7 +68,7 @@ default_defaults = {
     'num_nodes':           1,
     'master_addr':         '10.10.1.2:5000',
     'log_dir':             'logs/' + time.strftime('%Y%m%d%H%M%S'),
-    'log_file':            tempfile.mkdtemp() + 'node.log',
+    'log_file':            '/tmp/' + time.strftime('%d%H%M%S') + '-node.log',
 }
 
 
@@ -307,11 +307,20 @@ def stop_nodes():
             log("Broken pipe to rc%02d" % id)
     for node in active_nodes.values():
         node.wait(5.0)
+    rsync_logs()
+    active_nodes.clear()
+
+
+def rsync_logs():
+    '''
+    Collect logs from all of the nodes that participate in the experiment
+    to the login node.
+    '''
+    global active_nodes, node_ssh_addrs, log_file
     for id in active_nodes:
         ip = node_ssh_addrs[id]
         subprocess.run(["rsync", "-rtvq", "%s:%s" % (ip, log_file),
                 "%s/rc%02d.log" % (log_dir, id)])
-    active_nodes.clear()
 
 
 def do_cmd(command, r, r2 = range(0,0)):

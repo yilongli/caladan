@@ -74,6 +74,8 @@ void print_help(const char* exec_cmd) {
            "  --data-dist      Type of the random number distribution used to\n"
            "                   generate the sorting problem and its skewness\n"
            "                   factor (e.g., \"zipf 1.0\", \"norm 0.33\").\n"
+           // FIXME: what about multi-modal distribution?
+           // e.g., https://stackoverflow.com/questions/37320025/mixture-of-gaussian-distribution-in-c
            "  --log            Print the message size matrix to the log file.\n"
            "\n"
            "time_sync          Synchronize the clocks in the cluster.\n"
@@ -86,6 +88,8 @@ void print_help(const char* exec_cmd) {
            "                   data at TCP sockets.\n"
            "  --udp-port       UDP port number used to send and receive data-\n"
            "                   grams\n"
+           "  --link-speed     Network bandwidth available, in Gbps\n"
+           "                   (default: 25).\n"
            "  --policy         hadoop, lockstep, SRPT, or LRPT\n"
            "  --max-in-msgs    Maximum number of inbound messages which can\n"
            "                   be actively granted/acked any time.\n"
@@ -203,10 +207,11 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
     // Print summary statistics
     std::sort(tputs.begin(), tputs.end());
     size_t samples = tputs.size();
-    log_info("node-%d collected %lu data points, policy %s, max out %lu, "
-             "cluster size %d, avg. msg size %lu, data dist. %s-%.2f, "
-             "part. skewness %.2f, throughput %.1f Gbps", cluster->local_rank,
-             samples, shuffle_policy_str[opts.policy], opts.max_out_msgs,
+    log_info("node-%d collected %lu data points, policy %s, max granted %lu, "
+             "max out %lu, cluster size %d, avg. msg size %lu, "
+             "data dist. %s-%.2f, part. skewness %.2f, throughput %.1f Gbps",
+             cluster->local_rank, samples, shuffle_policy_str[opts.policy],
+             opts.max_in_msgs, opts.max_out_msgs,
              cluster->num_nodes, op.total_tx_bytes / op.num_nodes,
              op.use_zipf ? "zipf" : "norm", op.data_skew, op.part_skew,
              tputs[int(samples * 0.5)]);
@@ -387,7 +392,7 @@ void
 sig_handler(int signum)
 {
     tt_freeze();
-    tt_dump(stdout);
+    tt_dump(cmd_line_opts->log_file);
     panic("%s received, exiting...", strsignal(signum));
 }
 
