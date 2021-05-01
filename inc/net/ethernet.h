@@ -20,7 +20,8 @@
 //   - ETH_MAX_LEN must fit in MBUF_DEFAULT_LEN, along with other overheads
 //     (see ioqueues.c:estimate_shm_space for details).
 //   - Smaller packets are better for shuffle anyway.
-#define ETH_MAX_LEN		3818
+#define ETH_MAX_LEN		7918
+//#define ETH_MAX_LEN		3818
 #else
 #define ETH_MAX_LEN		1518
 #endif

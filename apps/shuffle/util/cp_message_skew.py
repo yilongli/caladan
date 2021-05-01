@@ -55,10 +55,10 @@ if not options.plot_only:
                     "gen_workload --avg-msg-size %d --data-dist zipf %.2f --log"
                     % (msg_size, msg_skew), nodes)
 
-                do_cmd("run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20", nodes)
+                do_cmd("run_bench --protocol udp --udp-port 5002 --policy GRPT --times 20", nodes)
                 # do_cmd("run_bench --protocol udp --udp-port 5002 --policy hadoop --max-unacked 5 --times 20", nodes)
                 # do_cmd("run_bench --protocol udp --udp-port 5002 --policy hadoop --max-unacked 2 --times 20", nodes)
-                # for policy in ["hadoop", "LRPT", "SRPT"]:
+                # for policy in ["hadoop", "GRPT", "SRPT"]:
                 #     do_cmd("run_bench --protocol udp --udp-port 5002 "
                 #            "--policy %s --times 20" % policy, nodes)
 

@@ -10,7 +10,8 @@ extern "C" {
 #include <base/log.h>
 }
 
-const char* shuffle_policy_str[] = {"hadoop", "lockstep", "SRPT", "GRPT"};
+const char* shuffle_policy_str[] =
+        {"hadoop", "lockstep", "SRPT", "GRPT", "GRPF"};
 
 /**
  * Use ioctl to obtain the IP address of a local network interface.
@@ -202,14 +203,15 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
             i++;
         } else if (strcmp(option, "--epoll") == 0) {
             use_epoll = true;
-            i++;
         } else if (strcmp(option, "--policy") == 0) {
             if (words[i+1] == "hadoop") {
                 policy = ShufflePolicy::HADOOP;
             } else if (words[i+1] == "lockstep") {
                 policy = ShufflePolicy::LOCKSTEP;
-            } else if (words[i+1] == "LRPT") {
-                policy = ShufflePolicy::LRPT;
+            } else if (words[i+1] == "GRPT") {
+                policy = ShufflePolicy::GRPT;
+            } else if (words[i+1] == "GRPF") {
+                policy = ShufflePolicy::GRPF;
             } else if (words[i+1] == "SRPT") {
                 policy = ShufflePolicy::SRPT;
             } else {
@@ -237,6 +239,14 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
                 return false;
             }
             i++;
+        } else if (strcmp(option, "--max-payload") == 0) {
+            if (!parse(words[i+1].c_str(), &max_payload, option, "unsigned")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else if (strcmp(option, "--no-memcpy") == 0) {
+            no_rx_memcpy = true;
         } else if (strcmp(option, "--link-speed") == 0) {
             if (!parse(words[i+1].c_str(), &link_speed, option, "unsigned")) {
                 log_err("failed to parse '%s %s'", option, words[i+1].c_str());

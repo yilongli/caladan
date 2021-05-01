@@ -16,7 +16,8 @@
 #include <iokernel/queue.h>
 
 #ifdef JUMBOFRAME
-#define MBUF_DEFAULT_LEN		4096
+#define MBUF_DEFAULT_LEN		8192
+//#define MBUF_DEFAULT_LEN		4096
 #else
 #define MBUF_DEFAULT_LEN		2048
 #endif

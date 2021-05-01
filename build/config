@@ -13,7 +13,7 @@ CONFIG_OPTIMIZE=n
 # Allow runtimes to access Mellanox ConnectX-5 NICs directly (kernel bypass)
 CONFIG_DIRECTPATH=n
 # Enable the runtime and iokernel to send/receive jumbo frames
-CONFIG_JUMBOFRAME=n
+CONFIG_JUMBOFRAME=y
 # Enable iokernel to collect run-time statistics for performance debugging
 CONFIG_IOKERNEL_STATS=y
 # Allow applications to access run-time statistics collected by the runtime

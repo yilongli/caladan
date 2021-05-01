@@ -134,7 +134,8 @@ enum ShufflePolicy {
     HADOOP = 0,
     LOCKSTEP = 1,
     SRPT = 2,
-    LRPT = 3,
+    GRPT = 3,
+    GRPF = 4,
 };
 
 extern const char* shuffle_policy_str[];
@@ -175,6 +176,14 @@ struct RunBenchOptions {
     /// message segment.
     size_t max_seg;
 
+    /// Maximum number of data bytes a UDP packet contains. 0 means as large as
+    /// possible (if MTU permits).
+    size_t max_payload;
+
+    /// True means skipping the memcpy operation that copies out the payload of
+    /// incoming data packets. Only used for performance debugging.
+    bool no_rx_memcpy;
+
     /// Number of times to repeat the experiment.
     size_t times;
 
@@ -187,6 +196,8 @@ struct RunBenchOptions {
         , max_in_msgs(10000)
         , max_out_msgs(10000)
         , max_seg(1400)
+        , max_payload()
+        , no_rx_memcpy(false)
         , times(1)
     {}
 

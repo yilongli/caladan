@@ -37,13 +37,13 @@ if not options.plot_only:
         log("Starting nodes with command:\n%s" % command)
         start_nodes(nodes, command)
         cmd_prefix = "gen_workload --avg-msg-size 50000"
-        for s in [x * 1e-2 for x in range(70, 300, 10)]:
+        for s in [x * 1e-2 for x in range(60, 410, 20)]:
             do_cmd(cmd_prefix + " --data-dist zipf %.2f --log" % s, nodes)
-            # do_cmd("run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20", nodes)
+            # do_cmd("run_bench --protocol udp --udp-port 5002 --policy GRPT --times 20", nodes)
 
         for s in [x**0.5 for x in reversed([0.1, 0.5, 1, 10, 100, 500, 10000])]:
             do_cmd(cmd_prefix + " --data-dist norm %.2f --log" % s, nodes)
-            # do_cmd("run_bench --protocol udp --udp-port 5002 --policy LRPT --times 20", nodes)
+            # do_cmd("run_bench --protocol udp --udp-port 5002 --policy GRPT --times 20", nodes)
 
         log("Stopping nodes")
         stop_nodes()

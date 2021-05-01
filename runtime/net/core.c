@@ -409,13 +409,18 @@ static void net_push_iphdr(struct mbuf *m, uint8_t proto, uint32_t daddr)
 {
 	struct ip_hdr *iphdr;
 
+	/* FIXME: hack to boost the priority of ACK packets in shuffle */
+	unsigned int mbuf_len = mbuf_length(m);
+	uint8_t prio = (mbuf_len < 256) ? 1 : 0;
+
 	/* TODO: Support "don't fragment" (DF) flag? */
 
 	/* populate IP header */
 	iphdr = mbuf_push_hdr(m, *iphdr);
 	iphdr->version = IPVERSION;
 	iphdr->header_len = 5;
-	iphdr->tos = IPTOS_DSCP_CS0 | IPTOS_ECN_NOTECT;
+	iphdr->tos = (prio << 5) | IPTOS_ECN_NOTECT;
+//	iphdr->tos = IPTOS_DSCP_CS0 | IPTOS_ECN_NOTECT;
 	iphdr->len = hton16(mbuf_length(m));
 	/* This must be unique across datagrams within a flow, see RFC 6864 */
 	iphdr->id = hash_crc32c_two(IP_ID_SEED, rdtsc() ^ proto,
