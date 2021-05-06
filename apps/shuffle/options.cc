@@ -247,6 +247,18 @@ RunBenchOptions::parse_args(std::vector<std::string> words)
             i++;
         } else if (strcmp(option, "--no-memcpy") == 0) {
             no_rx_memcpy = true;
+        } else if (strcmp(option, "--unsched-pkts") == 0) {
+            if (!parse(words[i+1].c_str(), &unsched_pkts, option, "integer")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
+        } else if (strcmp(option, "--over-commit") == 0) {
+            if (!parse(words[i+1].c_str(), &over_commit, option, "double")) {
+                log_err("failed to parse '%s %s'", option, words[i+1].c_str());
+                return false;
+            }
+            i++;
         } else if (strcmp(option, "--link-speed") == 0) {
             if (!parse(words[i+1].c_str(), &link_speed, option, "unsigned")) {
                 log_err("failed to parse '%s %s'", option, words[i+1].c_str());

@@ -184,6 +184,16 @@ struct RunBenchOptions {
     /// incoming data packets. Only used for performance debugging.
     bool no_rx_memcpy;
 
+    /// Number of packets of a message the sender is allowed to send without
+    /// getting grants from the receiver. -1 means this value is unspecified
+    /// by the user and should be chosen automatically based on RTT.
+    int unsched_pkts;
+
+    /// Limits the maximum number of grants a receiver can give out at any time.
+    /// For example, a value of 2.5 means a receiver can give out 2.5x RTTbytes
+    /// worth of grants at most.
+    double over_commit;
+
     /// Number of times to repeat the experiment.
     size_t times;
 
@@ -198,6 +208,8 @@ struct RunBenchOptions {
         , max_seg(1400)
         , max_payload()
         , no_rx_memcpy(false)
+        , unsched_pkts(-1)
+        , over_commit(2.0)
         , times(1)
     {}
 

@@ -26,8 +26,8 @@ rx_colors = []
 tx_colors = []
 cpu_colors = []
 
-out_pkts = {i:([],[]) for i in range(num_nodes)}
-in_pkts = {i:([],[]) for i in range(num_nodes)}
+out_pkts = {i:([],[],[]) for i in range(num_nodes)}
+in_pkts = {i:([],[],[]) for i in range(num_nodes)}
 
 bytes_per_us = 25.0 / 8 * 1e3   # 25Gbps network
 color_map = plt.get_cmap('tab20b', num_nodes)(range(num_nodes))
@@ -52,12 +52,14 @@ with open(tt_file, 'r') as file:
 
             max_ts = max(max_ts, time_us + pkt_time_us)
             if send_op:
-                times, targets = out_pkts[node0]
-                times.append(time_us)
+                tx_times, lens, targets = out_pkts[node0]
+                tx_times.append(time_us)
+                lens.append(pkt_time_us)
                 targets.append(node1)
             else:
-                times, sources = in_pkts[node0]
-                times.append(time_us)
+                rx_times, lens, sources = in_pkts[node0]
+                rx_times.append(time_us)
+                lens.append(pkt_time_us)
                 sources.append(node1)
         else:
             match = re.match('[ 0-9]* \| ([ 0-9.]+) us.*idle_cyc ([0-9]*)', line)
@@ -76,34 +78,34 @@ tx_util = {i:0 for i in range(num_nodes)}
 rx_util = {i:0 for i in range(num_nodes)}
 
 # Adjust the starting times of outbound packets to avoid overlap
-for node_id, (times, targets) in out_pkts.items():
+for node_id, (times, lens, targets) in out_pkts.items():
     for i in range(1, len(times)):
-        times[i] = max(times[i - 1] + pkt_time_us, times[i])
+        times[i] = max(times[i - 1] + lens[i - 1], times[i])
     # Compute uplink utilization
     prev_t = 0
-    for t in times:
-        tx_util[node_id] += t - prev_t
-        prev_t = t + pkt_time_us
-    tx_util[node_id] = 1 - tx_util[node_id] / (times[-1] + pkt_time_us)
+    for i in range(len(times)):
+        tx_util[node_id] += times[i] - prev_t
+        prev_t = times[i] + lens[i]
+    tx_util[node_id] = 1 - tx_util[node_id] / (times[-1] + lens[-1])
     # Add an outbound packet segment with its color
     for i in range(len(times)):
         t = times[i]
-        tx_busy_segs.append([(t, node_id), (t + pkt_time_us, node_id)])
+        tx_busy_segs.append([(t, node_id), (t + lens[i], node_id)])
         tx_colors.append(color_map[targets[i]])
 # Adjust the finishing times of inbound packets to avoid overlap
-for node_id, (times, sources) in in_pkts.items():
+for node_id, (times, lens, sources) in in_pkts.items():
     for i in reversed(range(len(times) - 1)):
-        times[i] = min(times[i + 1] - pkt_time_us, times[i])
+        times[i] = min(times[i + 1] - lens[i + 1], times[i])
     # Compute downlink utilization
     prev_t = 0
-    for t in times:
-        rx_util[node_id] += t - pkt_time_us - prev_t
-        prev_t = t
+    for i in range(len(times)):
+        rx_util[node_id] += times[i] - lens[i] - prev_t
+        prev_t = times[i]
     rx_util[node_id] = 1 - rx_util[node_id] / times[-1]
     # Add an inbound packet segment with its color
     for i in range(len(times)):
         t = times[i]
-        rx_busy_segs.append([(t - pkt_time_us, node_id), (t, node_id)])
+        rx_busy_segs.append([(t - lens[i], node_id), (t, node_id)])
         rx_colors.append(color_map[sources[i]])
 
 fig, (ax1, ax2, ax3) = plt.subplots(3, 1)

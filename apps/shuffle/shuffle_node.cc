@@ -98,6 +98,8 @@ void print_help(const char* exec_cmd) {
            "  --max-seg        Maximum number of bytes in a message segment.\n"
            "  --max-payload    Maximum number of data bytes in a packet.\n"
            "  --no-memcpy      Skip memcpy on packet arrival (experimental).\n"
+           "  --unsched-pkts   Number of unscheduled packets in a message.\n"
+           "  --over-commit    Degree of over-commitment (default: 2.0).\n"
            "  --times          Number of times to repeat the experiment.\n"
            "\n"
            "log [msg]          Print all of the words that follow the command\n"
@@ -130,7 +132,7 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         return false;
     }
 
-    std::vector<double> tputs;
+    std::vector<double> tputs_gbps;
 
     char ctrl_msg[32] = {};
     bool is_master = (cluster->local_rank == 0);
@@ -142,7 +144,6 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         op.next_inmsg_addr = op.rx_data.get();
         op.acked_out_msgs.reset(nullptr);
 
-        // TODO
         if (!opts.tcp_protocol)
             udp_shuffle_init(opts, *cluster, op);
 
@@ -156,6 +157,9 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         } else {
             cluster->control_socks[0]->WriteFull("READY", 5);
         }
+
+        // TODO: for large clusters, we must introduce delays to nodes that are
+        // contacted first so that all nodes roughly start at the same time!
 
         // The master node broadcasts while the followers block.
         uint64_t bcast_tsc = 0;
@@ -185,42 +189,70 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
         double tx_speed = (op.total_tx_bytes - loc_bytes) / (125.0*elapsed_us);
         tt_record4_np("shuffle op %u completed in %u us (%u/%u Mbps)",
                 run, elapsed_us, rx_speed * 1000, tx_speed * 1000);
-        tputs.push_back(tx_speed);
 
-        // The master node blocks until all followers complete.
+        // The master node blocks until all followers complete while the other
+        // nodes send their elapsed times and throughput as part of their "done"
+        // message.
+        // Note: we should not report the local throughput of the master node
+        // as the overall shuffle throughput; the overall throughput should be
+        // the throughput of the slowest node!
+        struct DoneMessage {
+            char tag[4];
+            uint32_t elapsed_us;
+            uint16_t mbps;
+        } __attribute__((__packed__));
         if (!is_master) {
-            cluster->control_socks[0]->WriteFull("DONE", 4);
+            tputs_gbps.push_back(std::max(rx_speed, tx_speed));
+            DoneMessage done{};
+            memcpy(done.tag, "DONE", 4);
+            done.elapsed_us = elapsed_us;
+            done.mbps = std::max(tx_speed, rx_speed) * 1e3;
+            cluster->control_socks[0]->WriteFull(&done, sizeof(DoneMessage));
             log_info("node-%d completed shuffle op %lu in %.1f us "
                      "(%.2f/%.2f Gbps)", cluster->local_rank, run, elapsed_us,
-                    rx_speed, tx_speed);
+                     rx_speed, tx_speed);
         } else {
+            uint32_t max_elapsed_us = elapsed_us;
+            double overall_gbps = std::max(tx_speed, rx_speed);
+            DoneMessage done{};
             for (auto& c : cluster->control_socks) {
-                c->ReadFull(ctrl_msg, 4);
-                assert(strncmp(ctrl_msg, "DONE", 4) == 0);
+                c->ReadFull(&done, sizeof(DoneMessage));
+                assert(strncmp(done.tag, "DONE", 4) == 0);
+                if (done.elapsed_us > max_elapsed_us) {
+                    max_elapsed_us = done.elapsed_us;
+                    overall_gbps = done.mbps * 1e-3;
+                }
             }
+            tputs_gbps.push_back(overall_gbps);
             uint64_t bench_overhead = rdtsc() - bcast_tsc - elapsed_tsc;
             log_info("node-%d completed shuffle op %lu in %.1f us "
-                     "(%.2f/%.2f Gbps), benchmark overhead %.1f us",
-                     cluster->local_rank, run, elapsed_us, rx_speed, tx_speed,
-                    bench_overhead * 1.0 / cycles_per_us);
+                     "(%.2f/%.2f Gbps), overall elapsed %u us (%.2f Gbps), "
+                     "benchmark overhead %.1f us", cluster->local_rank, run,
+                     elapsed_us, rx_speed, tx_speed, max_elapsed_us,
+                     overall_gbps, bench_overhead * 1.0 / cycles_per_us);
         }
     }
 
     // Print summary statistics
-    std::sort(tputs.begin(), tputs.end());
-    size_t samples = tputs.size();
+    std::sort(tputs_gbps.begin(), tputs_gbps.end(), std::greater<>());
+    size_t samples = tputs_gbps.size();
     const double proto_oh = sizeof(udp_shuffle_msg_hdr) + 28 + 18;
     log_info("node-%d collected %lu data points, policy %s, max payload %lu "
              "(proto. overhead %.0f), max granted %lu, max out %lu, "
              "cluster size %d, avg. msg size %lu, data dist. %s-%.2f, "
-             "part. skewness %.2f, rx memcpy %s, "
-             "throughput %.1f Gbps (raw %.1f Gbps)",
+             "part. skewness %.2f, rx memcpy %s, %s throughput "
+             "p50/p75/p90 %.1f/%.1f/%.1f Gbps (raw %.1f/%.1f/%.1f Gbps)",
              cluster->local_rank, samples, shuffle_policy_str[opts.policy],
              opts.max_payload, proto_oh, opts.max_in_msgs, opts.max_out_msgs,
              cluster->num_nodes, op.total_tx_bytes / op.num_nodes,
              op.use_zipf ? "zipf" : "norm", op.data_skew, op.part_skew,
-             opts.no_rx_memcpy ? "no" : "yes", tputs[int(samples * 0.5)],
-             tputs[int(samples * 0.5)] * (1 + proto_oh / opts.max_payload));
+             opts.no_rx_memcpy ? "no" : "yes", is_master ? "global" : "local",
+             tputs_gbps[int(samples * 0.50)],
+             tputs_gbps[int(samples * 0.75)],
+             tputs_gbps[int(samples * 0.90)],
+             tputs_gbps[int(samples * 0.50)] * (1 + proto_oh/opts.max_payload),
+             tputs_gbps[int(samples * 0.75)] * (1 + proto_oh/opts.max_payload),
+             tputs_gbps[int(samples * 0.90)] * (1 + proto_oh/opts.max_payload));
 
     return true;
 }
