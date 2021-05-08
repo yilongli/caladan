@@ -91,10 +91,8 @@ void print_help(const char* exec_cmd) {
            "  --link-speed     Network bandwidth available, in Gbps\n"
            "                   (default: 25).\n"
            "  --policy         hadoop, lockstep, SRPT, GRPT, or GRPF\n"
-           "  --max-in-msgs    Maximum number of inbound messages which can\n"
-           "                   be actively granted/acked any time.\n"
-           "  --max-out-msgs   Maximum number of outbound messages which can\n"
-           "                   be actively transmitted at any time.\n"
+           "  --max-in-msgs    Maximum number of inbound messages a node can\n"
+           "                   have (only used in the Hadoop algorithm).\n"
            "  --max-seg        Maximum number of bytes in a message segment.\n"
            "  --max-payload    Maximum number of data bytes in a packet.\n"
            "  --no-memcpy      Skip memcpy on packet arrival (experimental).\n"
@@ -238,12 +236,12 @@ run_bench_cmd(std::vector<std::string>& words, shuffle_op& op)
     size_t samples = tputs_gbps.size();
     const double proto_oh = sizeof(udp_shuffle_msg_hdr) + 28 + 18;
     log_info("node-%d collected %lu data points, policy %s, max payload %lu "
-             "(proto. overhead %.0f), max granted %lu, max out %lu, "
-             "cluster size %d, avg. msg size %lu, data dist. %s-%.2f, "
-             "part. skewness %.2f, rx memcpy %s, %s throughput "
-             "p50/p75/p90 %.1f/%.1f/%.1f Gbps (raw %.1f/%.1f/%.1f Gbps)",
+             "(proto. overhead %.0f), max inbound %lu, cluster size %d, "
+             "avg. msg size %lu, data dist. %s-%.2f, part. skewness %.2f, "
+             "rx memcpy %s, %s throughput  p50/p75/p90 %.1f/%.1f/%.1f Gbps "
+             "(raw %.1f/%.1f/%.1f Gbps)",
              cluster->local_rank, samples, shuffle_policy_str[opts.policy],
-             opts.max_payload, proto_oh, opts.max_in_msgs, opts.max_out_msgs,
+             opts.max_payload, proto_oh, opts.max_in_msgs,
              cluster->num_nodes, op.total_tx_bytes / op.num_nodes,
              op.use_zipf ? "zipf" : "norm", op.data_skew, op.part_skew,
              opts.no_rx_memcpy ? "no" : "yes", is_master ? "global" : "local",

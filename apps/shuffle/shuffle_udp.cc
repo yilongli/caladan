@@ -173,7 +173,7 @@ struct udp_out_msg {
  */
 struct udp_in_msg {
     /// Network address of the message sender.
-    netaddr remote_addr;
+    const netaddr remote_addr;
 
     /// Rank of the message sender in the cluster.
     const int peer;
@@ -207,8 +207,8 @@ struct udp_in_msg {
     /// Used to chain this inbound message into the grant queue.
     struct list_node q_link;
 
-    explicit udp_in_msg(int peer, size_t max_send_wnd)
-        : remote_addr()
+    explicit udp_in_msg(netaddr raddr, int peer, size_t max_send_wnd)
+        : remote_addr(raddr)
         , peer(peer)
         , num_pkts()
         , num_granted()
@@ -315,10 +315,27 @@ struct udp_shuffle_op {
     /// must be protected by @grant_mutex.
     struct list_head grant_queue;
 
+    /// Protects @send_queue.
+    rt::Mutex send_mutex;
+
+    /// Priority queue containing all outbound messages that haven't been fully
+    /// transmitted.
+    struct list_head send_queue;
+
     /// Semaphore used to park the TX thread when all bytes in the sliding
     /// windows of the outbound messages have been transmitted (it can be
     /// woken up by the RX thread later when ACKs arrive).
     rt::Semaphore send_ready;
+
+    /// Index of the next message to pull in @pull_targets.
+    std::atomic<size_t> next_pull_id;
+
+    /// Target nodes from which to pull our data; only used in pull-based
+    /// policies such as Hadoop.
+    std::vector<udp_in_msg*> pull_targets;
+
+    /// Number of pull requests we've received so far.
+    std::atomic<int> pull_reqs;
 
     rt::Semaphore shuffle_done;
 
@@ -346,22 +363,40 @@ struct udp_shuffle_op {
         , grants_avail(int(max_send_wnd * opts->over_commit))
         , grant_mutex()
         , grant_queue(LIST_HEAD_INIT(grant_queue))
+        , send_mutex()
+        , send_queue(LIST_HEAD_INIT(send_queue))
         , send_ready(0)
+        , next_pull_id()
+        , pull_targets()
+        , pull_reqs()
         , shuffle_done(0)
     {
         size_t num_pkts;
         for (int i = 0; i < num_nodes; i++) {
             num_pkts = (i == local_rank) ? 0 :
                     (common_op->out_bufs[i].len + max_payload - 1)/max_payload;
-            tx_msgs.emplace_back(i, num_pkts, unsched_pkts);
+            tx_msgs.emplace_back(i, num_pkts,
+                    opts->policy == HADOOP ? 0 : unsched_pkts);
         }
 
         for (int i = 0; i < num_nodes; i++) {
-            rx_msgs.emplace_back(i, max_send_wnd);
+            netaddr raddr = {c->server_list[i], local_addr.port};
+            rx_msgs.emplace_back(raddr, i, max_send_wnd);
         }
         tt_record("udp_shuffle_op: max_send_wnd %u, unsched_pkts %u, "
                 "grant_avail %u, min_ack_inc %u", max_send_wnd, unsched_pkts,
                 grants_avail.load(), min_ack_inc);
+
+        if (opts->policy == HADOOP) {
+            for (auto& in_msg : rx_msgs) {
+                if (in_msg.peer != local_rank) {
+                    pull_targets.push_back(&in_msg);
+                }
+            }
+            std::random_device rd;
+            std::mt19937 g(rd());
+            std::shuffle(pull_targets.begin(), pull_targets.end(), g);
+        }
     }
 };
 
@@ -400,11 +435,15 @@ static void insert_pq(list_head *pq, T *start, T *new_msg,
 
 /// Insert outgoing message @new_msg to @send_queue based on the shuffle policy.
 static void insert_sq(list_head *send_queue, udp_out_msg *new_msg,
-        ShufflePolicy policy, int max_out_msgs, udp_out_msg *start = nullptr)
+        ShufflePolicy policy, udp_out_msg *start = nullptr)
 {
     switch (policy) {
+        case ShufflePolicy::HADOOP:
+            list_add_tail(send_queue, &new_msg->q_link);
+            break;
         case ShufflePolicy::SRPT:
-            insert_pq(send_queue, start, new_msg, udp_out_msg::compare_srpt);
+            insert_pq(send_queue, (udp_out_msg *)nullptr, new_msg,
+                    udp_out_msg::compare_srpt);
             break;
         case ShufflePolicy::GRPT:
             insert_pq(send_queue, start, new_msg, udp_out_msg::compare_grpt);
@@ -422,8 +461,12 @@ static void insert_gq(list_head *grant_queue, udp_in_msg *new_msg,
         ShufflePolicy policy, udp_in_msg *start = nullptr)
 {
     switch (policy) {
+        case ShufflePolicy::HADOOP:
+            list_add_tail(grant_queue, &new_msg->q_link);
+            break;
         case ShufflePolicy::SRPT:
-            insert_pq(grant_queue, start, new_msg, udp_in_msg::compare_srpt);
+            insert_pq(grant_queue, (udp_in_msg *)nullptr, new_msg,
+                    udp_in_msg::compare_srpt);
             break;
         case ShufflePolicy::GRPT:
             insert_pq(grant_queue, start, new_msg, udp_in_msg::compare_grpt);
@@ -442,6 +485,28 @@ static void insert_gq(list_head *grant_queue, udp_in_msg *new_msg,
 static void udp_grantor(Cluster &c, shuffle_op &common_op,
         udp_shuffle_op &op, RunBenchOptions &opts)
 {
+    udp_shuffle_msg_hdr ack_hdr = {
+        .op_id = (int16_t) common_op.id,
+        .peer = (int16_t) op.local_rank,
+        .ack_no = 0,
+    };
+
+    // For pull-based policies, send out initial pull requests to kick start.
+    if (opts.policy == HADOOP) {
+        size_t n = std::min(opts.max_in_msgs, op.pull_targets.size());
+        op.next_pull_id += n;
+        for (size_t i = 0; i < n; i++) {
+            udp_in_msg* target = op.pull_targets[i];
+            ack_hdr.tag = 2;
+            ack_hdr.grant_limit = op.unsched_pkts;
+            tt_record("node-%d: sending PULL %u to node-%d (grant_limit %u)",
+                    op.local_rank, ack_hdr.ack_no, target->peer,
+                    ack_hdr.grant_limit);
+            udp_send(&ack_hdr, sizeof(ack_hdr), op.local_addr,
+                    target->remote_addr);
+        }
+    }
+
     while (op.incompleted_in_msgs > 0) {
         // Waking up every 5 us seems to work pretty well in practice.
         rt::Sleep(5);
@@ -493,14 +558,9 @@ static void udp_grantor(Cluster &c, shuffle_op &common_op,
 
         // Send back ACKs.
         timestamp_create(send_ack)
-        udp_shuffle_msg_hdr ack_hdr = {
-            .op_id = (int16_t) common_op.id,
-            .peer = (int16_t) op.local_rank,
-            .is_ack = 1,
-            .ack_no = ack_no,
-            .grant_limit = (uint16_t) grantee->num_granted,
-//            .seg_size = 0, .msg_size = 0, .start = 0,
-        };
+        ack_hdr.tag = 1;
+        ack_hdr.ack_no = ack_no;
+        ack_hdr.grant_limit = grantee->num_granted;
         tt_record("node-%d: sending ACK %u to node-%d (grant_limit %u)",
                 op.local_rank, ack_hdr.ack_no, grantee->peer,
                 ack_hdr.grant_limit);
@@ -542,12 +602,12 @@ static void rx_thread(struct udp_spawn_data *d)
 
     int peer = msg_hdr.peer;
     if (msg_hdr.op_id != common_op->id) {
-        tt_record("node-%d: dropped obsolete packet from op %d, is_ack %u, "
-                  "ack_no %u", msg_hdr.op_id, msg_hdr.is_ack, msg_hdr.ack_no);
+        tt_record("node-%d: dropped obsolete packet from op %d, tag %u, "
+                  "ack_no %u", msg_hdr.op_id, msg_hdr.tag, msg_hdr.ack_no);
         goto done;
     }
 
-    if (msg_hdr.is_ack) {
+    if (msg_hdr.tag == 1) {
         // ACK message.
         tt_record(start_tsc, "node-%d: received ACK %u from node-%d, grant %u",
                 op->local_rank, msg_hdr.ack_no, peer, msg_hdr.grant_limit);
@@ -571,6 +631,18 @@ static void rx_thread(struct udp_spawn_data *d)
                 }
             }
         }
+    } else if (msg_hdr.tag == 2) {
+        // PULL message
+        tt_record(start_tsc, "node-%d: received PULL %u from node-%d, grant %u",
+                op->local_rank, msg_hdr.ack_no, peer, msg_hdr.grant_limit);
+        op->pull_reqs++;
+        auto& tx_msg = op->tx_msgs[peer];
+        tx_msg.send_wnd = msg_hdr.grant_limit;
+        rt::ScopedLock<rt::Mutex> lock_sq(&op->send_mutex);
+        list_add_tail(&op->send_queue, &tx_msg.q_link);
+        tt_record("node-%d: added message to node-%d from send_queue",
+                op->local_rank, tx_msg.peer);
+        op->send_ready.Up();
     } else {
         // Normal data segment.
         tt_record(start_tsc, "node-%d: receiving bytes %lu-%lu from node-%d",
@@ -593,7 +665,6 @@ static void rx_thread(struct udp_spawn_data *d)
                         std::memory_order_relaxed);
                 common_op->in_bufs[peer].addr = buf;
                 common_op->in_bufs[peer].len = msg_hdr.msg_size;
-                rx_msg.remote_addr = d->raddr;
                 rx_msg.num_pkts = (msg_hdr.msg_size + op->max_payload - 1) /
                                   op->max_payload;
                 rx_msg.num_granted = std::min(op->unsched_pkts,
@@ -649,7 +720,7 @@ static void rx_thread(struct udp_spawn_data *d)
             udp_shuffle_msg_hdr ack_hdr = {
                 .op_id = msg_hdr.op_id,
                 .peer = (int16_t) op->local_rank,
-                .is_ack = 1,
+                .tag = 1,
                 .ack_no = (uint16_t) rx_msg.num_pkts,
                 .grant_limit = (uint16_t) rx_msg.num_pkts,
 //                .seg_size = 0, .msg_size = 0, .start = 0,
@@ -658,13 +729,27 @@ static void rx_thread(struct udp_spawn_data *d)
                     ack_hdr.ack_no, peer);
             udp_respond(&ack_hdr, sizeof(ack_hdr), d);
             percpu_metric_get(tx_ack_pkts)++;
+
+            // Send out another pull request.
+            if (op->policy == HADOOP) {
+                size_t idx = op->next_pull_id.fetch_add(1);
+                if (idx < op->pull_targets.size()) {
+                    ack_hdr.tag = 2;
+                    ack_hdr.ack_no = 0;
+                    ack_hdr.grant_limit = op->unsched_pkts;
+                    tt_record("node-%d: sending PULL %u to node-%d",
+                            op->local_rank, ack_hdr.ack_no, peer);
+                    udp_send(&ack_hdr, sizeof(ack_hdr), op->local_addr,
+                            op->pull_targets[idx]->remote_addr);
+                }
+            }
         }
     }
 
   done:
     udp_spawn_data_release(d->release_data);
     timestamp_create(end)
-    if (msg_hdr.is_ack) {
+    if (msg_hdr.tag == 1) {
         percpu_metric_get(rx_ack_pkts)++;
         percpu_metric_get(handle_ack_cycles) +=
                 timestamp_get(end) - timestamp_get(start);
@@ -708,21 +793,16 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
     for (int i = 1; i < c.num_nodes; i++) {
         peers.push_back((c.local_rank + i) % c.num_nodes);
     }
-    if (opts.policy == HADOOP) {
-        std::random_device rd;
-        std::mt19937 g(rd());
-        std::shuffle(peers.begin(), peers.end(), g);
-    }
 
-    // @send_queue: main data structure used to implement the shuffle policy.
-    struct list_head send_queue = LIST_HEAD_INIT(send_queue);
     now = rdtsc();
 
-    // Populate @send_queue with outgoing messages.
-    for (int peer : peers) {
-        op.tx_msgs[peer].last_ack_tsc = now;
-        insert_sq(&send_queue, &op.tx_msgs[peer], opts.policy,
-                opts.max_out_msgs);
+    // Populate @send_queue with outgoing messages. Note: for the Hadoop policy,
+    // we need to add outgoing messages when we receive the "pull" requests.
+    if (op.policy != HADOOP) {
+        for (int peer : peers) {
+            op.tx_msgs[peer].last_ack_tsc = now;
+            insert_sq(&op.send_queue, &op.tx_msgs[peer], opts.policy);
+        }
     }
 
     QueueEstimator queue_estimator(opts.link_speed * 1000);
@@ -737,24 +817,45 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
     // rare (shouldn't happen in our experiment?); 2. timeout can be delegated
     // to Homa in a real impl.?).
     timestamp_create(search_start)
-    while (!list_empty(&send_queue)) {
+    rt::Mutex* lock_sq = opts.policy == HADOOP ? &op.send_mutex : nullptr;
+    while (true) {
+        if (lock_sq)
+            lock_sq->Lock();
+        if (list_empty(&op.send_queue)) {
+            if (lock_sq) {
+                lock_sq->Unlock();
+                if (op.pull_reqs.load() < op.num_nodes - 1) {
+                    tt_record("node-%d: TX thread waiting for more PULLs",
+                            c.local_rank);
+                    op.send_ready.DownAll();
+                    continue;
+                }
+            }
+            break;
+        }
+
         // Find the next message to send.
         udp_out_msg* next_msg = nullptr;
         udp_out_msg* right_nb = nullptr;
         udp_out_msg* msg;
-        size_t msg_idx = 0;
-        list_for_each(&send_queue, msg, q_link) {
-            // Only consider the top-N outbound messages in the send queue.
-            if (msg_idx >= opts.max_out_msgs) {
-                break;
-            }
-            msg_idx++;
-
+        list_for_each(&op.send_queue, msg, q_link) {
             uint32_t grant_limit = msg->send_wnd.load();
             if (msg->next_send_pkt < grant_limit) {
                 next_msg = msg;
-                right_nb = list_next(&send_queue, next_msg, q_link);
-                list_del_from(&send_queue, &msg->q_link);
+                right_nb = list_next(&op.send_queue, next_msg, q_link);
+                if (opts.policy == HADOOP) {
+                    // Rotate the list until @next_msg becomes the new head.
+                    udp_out_msg* head;
+                    while (true) {
+                        head = list_pop(&op.send_queue, udp_out_msg, q_link);
+                        if (head == next_msg) {
+                            break;
+                        } else {
+                            list_add_tail(&op.send_queue, &head->q_link);
+                        }
+                    }
+                }
+                list_del_from(&op.send_queue, &msg->q_link);
                 break;
             }
         }
@@ -769,10 +870,11 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
                 tt_record("node-%d: removed message to node-%d from send_queue",
                         c.local_rank, next_msg->peer);
             } else {
-                insert_sq(&send_queue, next_msg, opts.policy,
-                        opts.max_out_msgs, right_nb);
+                insert_sq(&op.send_queue, next_msg, opts.policy, right_nb);
             }
         }
+        if (lock_sq)
+            lock_sq->Unlock();
 
         timestamp_create(search_fin)
         percpu_metric_get(grpt_msg_cycles) +=
@@ -796,7 +898,7 @@ udp_tx_main(Cluster& c, shuffle_op& common_op, udp_shuffle_op& op,
         udp_shuffle_msg_hdr msg_hdr = {
             .op_id = (int16_t) common_op.id,
             .peer = (int16_t) c.local_rank,
-            .is_ack = 0,
+            .tag = 0,
             .ack_no = 0,
             .grant_limit = 0,
             .seg_size = (uint16_t) len,
